@@ -5,6 +5,9 @@ Payrail development network, verifies and re-executes sequential blocks, and
 keeps its own durable ledger and receipt index. It is not yet a production
 validator and the current upstream does not provide multi-validator BFT finality.
 
+The hosted demonstration is available at
+[public-node.payrail.one](https://public-node.payrail.one).
+
 ## Start with Docker Compose
 
 From the public node repository:

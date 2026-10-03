@@ -27,6 +27,9 @@ The API is bound to loopback by default. The node follows
 `node-state` Docker volume across restarts. Configure several comma-separated
 origins with `PAYRAIL_NODE_UPSTREAMS` for failover.
 
+A hosted demonstration of the same public-replica build is available at
+[public-node.payrail.one](https://public-node.payrail.one).
+
 ```sh
 docker compose logs --follow node
 docker compose down
