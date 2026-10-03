@@ -2,7 +2,8 @@ use std::collections::BTreeMap;
 
 use crate::{
     AccountId, AccountStatus, AssetDefinition, AssetId, AssetState, AssetStatus,
-    BackingRequirement, Balance, LedgerError, NetworkId, Nonce,
+    BackingRequirement, Balance, ContractId, ContractRecord, ContractStateEntry, LedgerError,
+    NetworkId, Nonce, contract::validate_code,
 };
 
 use super::{Ledger, validate_definition};
@@ -43,6 +44,8 @@ pub struct LedgerSnapshot {
     pub nonces: Vec<SnapshotNonce>,
     pub next_operation_index: u64,
     pub account_statuses: Vec<SnapshotAccountStatus>,
+    pub contracts: Vec<ContractRecord>,
+    pub contract_state: Vec<ContractStateEntry>,
 }
 
 impl Ledger {
@@ -91,6 +94,16 @@ impl Ledger {
                     status: *status,
                 })
                 .collect(),
+            contracts: self.contracts.values().cloned().collect(),
+            contract_state: self
+                .contract_state
+                .iter()
+                .map(|((contract, key), value)| ContractStateEntry {
+                    contract: *contract,
+                    key: key.clone(),
+                    value: *value,
+                })
+                .collect(),
         }
     }
 
@@ -116,6 +129,8 @@ impl Ledger {
         let nonces = restore_nonces(snapshot.nonces);
         validate_operation_sequence(&nonces, snapshot.next_operation_index)?;
         let account_statuses = restore_account_statuses(&assets, snapshot.account_statuses)?;
+        let contracts = restore_contracts(snapshot.contracts)?;
+        let contract_state = restore_contract_state(&contracts, snapshot.contract_state)?;
 
         Ok(Self {
             network: snapshot.network,
@@ -125,6 +140,8 @@ impl Ledger {
             nonces,
             next_operation_index: snapshot.next_operation_index,
             account_statuses,
+            contracts,
+            contract_state,
             events: Vec::new(),
         })
     }
@@ -147,12 +164,49 @@ fn validate_canonical_order(snapshot: &LedgerSnapshot) -> Result<(), LedgerError
         .account_statuses
         .windows(2)
         .all(|pair| (pair[0].asset, pair[0].account) < (pair[1].asset, pair[1].account));
+    let contracts_ok = snapshot
+        .contracts
+        .windows(2)
+        .all(|pair| pair[0].id < pair[1].id);
+    let contract_state_ok = snapshot
+        .contract_state
+        .windows(2)
+        .all(|pair| (pair[0].contract, &pair[0].key) < (pair[1].contract, &pair[1].key));
 
-    if assets_ok && balances_ok && nonces_ok && statuses_ok {
+    if assets_ok && balances_ok && nonces_ok && statuses_ok && contracts_ok && contract_state_ok {
         Ok(())
     } else {
         Err(LedgerError::NonCanonicalSnapshot)
     }
+}
+
+fn restore_contracts(
+    contracts: Vec<ContractRecord>,
+) -> Result<BTreeMap<ContractId, ContractRecord>, LedgerError> {
+    let mut restored = BTreeMap::new();
+    for contract in contracts {
+        validate_code(&contract.code)?;
+        restored.insert(contract.id, contract);
+    }
+    Ok(restored)
+}
+
+fn restore_contract_state(
+    contracts: &BTreeMap<ContractId, ContractRecord>,
+    state: Vec<ContractStateEntry>,
+) -> Result<BTreeMap<(ContractId, Vec<u8>), u128>, LedgerError> {
+    let mut restored = BTreeMap::new();
+    for entry in state {
+        if !contracts.contains_key(&entry.contract)
+            || entry.key.is_empty()
+            || entry.key.len() > 32
+            || entry.value == 0
+        {
+            return Err(LedgerError::SnapshotPolicyViolation);
+        }
+        restored.insert((entry.contract, entry.key), entry.value);
+    }
+    Ok(restored)
 }
 
 fn restore_assets(

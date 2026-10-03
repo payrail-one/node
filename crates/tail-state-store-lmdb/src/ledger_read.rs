@@ -348,6 +348,8 @@ impl LmdbTailStateStore {
             nonces: read_rows(self.nonces, transaction)?,
             operation_sequence: read_rows(self.operation_sequence, transaction)?,
             account_statuses: read_rows(self.account_statuses, transaction)?,
+            contracts: read_rows(self.contracts, transaction)?,
+            contract_state: read_rows(self.contract_state, transaction)?,
         })
     }
 }

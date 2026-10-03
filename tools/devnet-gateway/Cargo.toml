@@ -32,7 +32,7 @@ payment-rate-limit-lmdb = { path = "../../crates/payment-rate-limit-lmdb" }
 receipt-index-core = { path = "../../crates/receipt-index-core" }
 receipt-index-lmdb = { path = "../../crates/receipt-index-lmdb" }
 receipt-rebuild-core = { path = "../../crates/receipt-rebuild-core" }
-reqwest = { version = "=0.13.2", default-features = false, features = ["blocking", "json", "rustls"] }
+reqwest = { version = "=0.13.2", default-features = false, features = ["blocking", "json"] }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.151"
 sha2 = { version = "=0.11.0", default-features = false }

@@ -27,6 +27,7 @@ pub enum DevnetError {
     AccountAlreadyFunded,
     FaucetExhausted,
     SyncBlockNotFound,
+    ContractNotFound,
     InvalidSyncBlock,
     InvalidQuorumConfiguration,
     InvalidQuorumRequest,
@@ -48,9 +49,10 @@ impl DevnetError {
             | Self::InvalidSyncBlock
             | Self::InvalidQuorumRequest
             | Self::ApprovalInvalid => StatusCode::BAD_REQUEST,
-            Self::CheckoutNotFound | Self::SyncBlockNotFound | Self::ApprovalNotFound => {
-                StatusCode::NOT_FOUND
-            }
+            Self::CheckoutNotFound
+            | Self::SyncBlockNotFound
+            | Self::ApprovalNotFound
+            | Self::ContractNotFound => StatusCode::NOT_FOUND,
             Self::ApprovalUnauthorized => StatusCode::UNAUTHORIZED,
             Self::ApprovalRateLimited => StatusCode::TOO_MANY_REQUESTS,
             Self::AccountAlreadyFunded
@@ -87,6 +89,7 @@ impl fmt::Display for DevnetError {
             Self::AccountAlreadyFunded => "this development account already used the faucet",
             Self::FaucetExhausted => "development faucet has insufficient funds",
             Self::SyncBlockNotFound => "finalized synchronization block was not found",
+            Self::ContractNotFound => "Payrail contract was not found",
             Self::InvalidSyncBlock => "invalid finalized synchronization block",
             Self::InvalidQuorumConfiguration => "invalid validator quorum configuration",
             Self::InvalidQuorumRequest => "invalid authenticated quorum request",

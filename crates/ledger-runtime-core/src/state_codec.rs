@@ -2,10 +2,11 @@ use ledger_core::{LedgerSnapshot, NetworkId};
 
 use crate::{LedgerRow, LedgerStateRows, RuntimeError, decoder::Decoder};
 
-const STATE_DOMAIN: &[u8; 16] = b"ledger.state.v2\0";
+const STATE_DOMAIN_V2: &[u8; 16] = b"ledger.state.v2\0";
+const STATE_DOMAIN_V3: &[u8; 16] = b"ledger.state.v3\0";
 const MAX_STATE_ENTRIES: usize = 1_000_000;
 const MAX_ROW_KEY_BYTES: usize = 64;
-const MAX_ROW_VALUE_BYTES: usize = 512;
+const MAX_ROW_VALUE_BYTES: usize = 20 * 1024;
 pub const MAX_LEDGER_STATE_BYTES: usize = 512 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -20,7 +21,12 @@ impl LedgerStateCodec {
     pub fn encode(snapshot: &LedgerSnapshot) -> Result<Vec<u8>, RuntimeError> {
         let rows = LedgerStateRows::from_snapshot(snapshot)?;
         let mut output = Vec::new();
-        output.extend_from_slice(STATE_DOMAIN);
+        let includes_contract_state = !rows.contracts.is_empty() || !rows.contract_state.is_empty();
+        output.extend_from_slice(if includes_contract_state {
+            STATE_DOMAIN_V3
+        } else {
+            STATE_DOMAIN_V2
+        });
         output.extend_from_slice(rows.network.as_bytes());
         output.extend_from_slice(rows.registry_authority.as_bytes());
         encode_rows(&mut output, &rows.assets)?;
@@ -28,6 +34,10 @@ impl LedgerStateCodec {
         encode_rows(&mut output, &rows.nonces)?;
         encode_rows(&mut output, &rows.operation_sequence)?;
         encode_rows(&mut output, &rows.account_statuses)?;
+        if includes_contract_state {
+            encode_rows(&mut output, &rows.contracts)?;
+            encode_rows(&mut output, &rows.contract_state)?;
+        }
         if output.len() > MAX_LEDGER_STATE_BYTES {
             return Err(RuntimeError::StateTooLarge);
         }
@@ -47,7 +57,8 @@ impl LedgerStateCodec {
             return Err(RuntimeError::StateTooLarge);
         }
         let mut decoder = Decoder::new(input);
-        if decoder.read_array::<16>()? != *STATE_DOMAIN {
+        let domain = decoder.read_array::<16>()?;
+        if domain != *STATE_DOMAIN_V2 && domain != *STATE_DOMAIN_V3 {
             return Err(RuntimeError::InvalidDomain);
         }
         let rows = LedgerStateRows {
@@ -58,6 +69,16 @@ impl LedgerStateCodec {
             nonces: decode_rows(&mut decoder)?,
             operation_sequence: decode_rows(&mut decoder)?,
             account_statuses: decode_rows(&mut decoder)?,
+            contracts: if domain == *STATE_DOMAIN_V3 {
+                decode_rows(&mut decoder)?
+            } else {
+                Vec::new()
+            },
+            contract_state: if domain == *STATE_DOMAIN_V3 {
+                decode_rows(&mut decoder)?
+            } else {
+                Vec::new()
+            },
         };
         decoder.finish()?;
         rows.into_snapshot(expected_network)

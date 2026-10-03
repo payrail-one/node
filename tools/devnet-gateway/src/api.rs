@@ -9,9 +9,9 @@ use crate::{
     AppState, DevnetError,
     model::{
         AccountStateView, ApprovalCodeChallengeView, ApprovalCodeClaimView, CheckoutView,
-        ClaimApprovalCodeRequest, CreateCheckoutRequest, ExplorerOverviewView, FaucetRequest,
-        IssueApprovalCodeRequest, IssuedApprovalCodeView, LiveEvent, NetworkStatusView,
-        SubmissionResultView, SubmitRequest,
+        ClaimApprovalCodeRequest, ContractView, CreateCheckoutRequest, ExplorerOverviewView,
+        FaucetRequest, IssueApprovalCodeRequest, IssuedApprovalCodeView, LiveEvent,
+        NetworkStatusView, SubmissionResultView, SubmitRequest,
     },
     quorum::{QuorumProposal, QuorumValidatorStatus, QuorumVote},
 };
@@ -22,6 +22,15 @@ use crate::{
 
 pub async fn status(State(state): State<AppState>) -> Result<Json<NetworkStatusView>, DevnetError> {
     with_service(state, |service| Ok(service.status()))
+        .await
+        .map(Json)
+}
+
+pub async fn contract(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<ContractView>, DevnetError> {
+    with_service(state, move |service| service.contract(&id))
         .await
         .map(Json)
 }

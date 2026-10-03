@@ -4,6 +4,7 @@ mod api;
 mod approval;
 mod checkout;
 mod codec;
+mod contract_view;
 mod error;
 mod index;
 mod live;
@@ -33,8 +34,9 @@ use crate::{
 
 pub use error::DevnetError;
 pub use model::{
-    AccountStateView, ExplorerOverviewView, NetworkAssetView, NetworkStatusView,
-    SubmissionResultView, SubmitRequest, SyncBlockView, SyncBootstrapView, SyncCheckpointView,
+    AccountStateView, ContractExecutionView, ContractStateEntryView, ContractView,
+    ExplorerOverviewView, NetworkAssetView, NetworkStatusView, SubmissionResultView, SubmitRequest,
+    SyncBlockView, SyncBootstrapView, SyncCheckpointView,
 };
 pub use service::DevnetService;
 
@@ -145,6 +147,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/accounts/{address}", get(api::account))
         .route("/api/faucet", post(api::faucet))
         .route("/api/transactions", post(api::submit))
+        .route("/api/contracts/{id}", get(api::contract))
         .route("/api/explorer", get(api::explorer))
         .route("/api/live", get(live::upgrade))
         .route("/api/sync/bootstrap", get(api::sync_bootstrap))

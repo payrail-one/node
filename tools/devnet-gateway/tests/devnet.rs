@@ -9,8 +9,8 @@ use account_address::AddressCodec;
 use devnet_gateway::{DevnetError, DevnetService};
 use ed25519_dalek::{Signer, SigningKey};
 use ledger_core::{
-    AccountId, AssetId, Authorization, AuthorizationRole, AuthorizedOperation, IdempotencyKey,
-    NetworkId, SignatureBytes, SignedOperation, Transfer,
+    AccountId, AssetId, Authorization, AuthorizationRole, AuthorizedOperation, ContractCall,
+    ContractDeploy, IdempotencyKey, NetworkId, SignatureBytes, SignedOperation, Transfer,
 };
 use transaction_protocol::SignedOperationCodec;
 
@@ -86,6 +86,21 @@ fn signed_transfer_exact(
     }
 }
 
+fn sign_operation(sender: &SigningKey, operation: AuthorizedOperation) -> SignedOperation {
+    let sender_account = AccountId::new(sender.verifying_key().to_bytes());
+    let message = operation
+        .authorization_message(AuthorizationRole::Sender)
+        .unwrap();
+    SignedOperation {
+        operation,
+        sender_authorization: Authorization {
+            signer: sender_account,
+            signature: SignatureBytes::new(sender.sign(&message).to_bytes()),
+        },
+        fee_payer_authorization: None,
+    }
+}
+
 fn hex_32(value: &str) -> [u8; 32] {
     assert_eq!(value.len(), 64);
     let mut output = [0_u8; 32];
@@ -145,6 +160,96 @@ fn faucet_and_browser_style_transfer_reach_the_independent_explorer_index() {
     assert_eq!(explorer.blocks.len(), 3);
     assert_eq!(explorer.transactions.len(), 2);
     assert_eq!(explorer.transactions[0], finalized.transaction);
+}
+
+#[test]
+fn signed_contract_deploy_and_call_finalize_and_recover() {
+    let directory = TestDirectory::new("contract");
+    let owner_key = SigningKey::from_bytes(&[88; 32]);
+    let owner = AccountId::new(owner_key.verifying_key().to_bytes());
+    let owner_address = address(&owner_key);
+    let code = state_contract_code();
+    let deploy = ContractDeploy {
+        network: NETWORK,
+        idempotency_key: IdempotencyKey::new([81; 32]),
+        asset: ASSET,
+        owner,
+        salt: [82; 32],
+        code,
+        fee: 0,
+        nonce: 0,
+        valid_until_height: 20,
+    };
+    let contract_id = ledger_core::contract_id(&deploy);
+    {
+        let mut devnet = DevnetService::open(&directory.0).unwrap();
+        devnet.faucet(&owner_address).unwrap();
+        let deployed = devnet
+            .submit_hex(&envelope_hex(&sign_operation(
+                &owner_key,
+                AuthorizedOperation::ContractDeploy(deploy),
+            )))
+            .unwrap();
+        assert_eq!(deployed.transaction.kind, "contractDeploy");
+        assert_eq!(deployed.transaction.block_height, "2");
+        assert_eq!(deployed.contract.unwrap().events.len(), 0);
+
+        let call = ContractCall {
+            network: NETWORK,
+            idempotency_key: IdempotencyKey::new([83; 32]),
+            asset: ASSET,
+            caller: owner,
+            contract: contract_id,
+            entrypoint: "set".to_owned(),
+            args: 42_u128.to_be_bytes().to_vec(),
+            attached_amount: 1_000,
+            fee: 0,
+            execution_limit: 100,
+            nonce: 1,
+            valid_until_height: 21,
+        };
+        let called = devnet
+            .submit_hex(&envelope_hex(&sign_operation(
+                &owner_key,
+                AuthorizedOperation::ContractCall(call),
+            )))
+            .unwrap();
+        assert_eq!(called.transaction.kind, "contractCall");
+        let execution = called.contract.unwrap();
+        assert_eq!(execution.entrypoint.as_deref(), Some("set"));
+        assert_eq!(execution.events, vec!["536574"]);
+        let contract = devnet.contract(&hex(&contract_id.as_bytes()[..])).unwrap();
+        assert_eq!(contract.balance, "1000");
+        assert_eq!(contract.state[0].value, "42");
+        assert_eq!(contract.finalized_height, "3");
+    }
+    let recovered = DevnetService::open(&directory.0).unwrap();
+    let contract = recovered
+        .contract(&hex(&contract_id.as_bytes()[..]))
+        .unwrap();
+    assert_eq!(contract.balance, "1000");
+    assert_eq!(contract.state[0].value, "42");
+}
+
+fn state_contract_code() -> Vec<u8> {
+    let mut body = vec![0x02, 0, 0, 0x0b, 5];
+    body.extend(b"value");
+    body.extend([0x0c, 3]);
+    body.extend(b"Set");
+    body.push(0x00);
+    let mut code = b"PRC1".to_vec();
+    code.extend([1, 3]);
+    code.extend(b"set");
+    code.extend(u16::try_from(body.len()).unwrap().to_be_bytes());
+    code.extend(body);
+    code
+}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().fold(String::new(), |mut output, byte| {
+        write!(output, "{byte:02x}").unwrap();
+        output
+    })
 }
 
 #[test]

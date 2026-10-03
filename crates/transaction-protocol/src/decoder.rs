@@ -41,7 +41,7 @@ impl<'a> Decoder<'a> {
         }
     }
 
-    fn read_slice(&mut self, length: usize) -> Result<&'a [u8], ProtocolError> {
+    pub(crate) fn read_slice(&mut self, length: usize) -> Result<&'a [u8], ProtocolError> {
         let end = self
             .position
             .checked_add(length)

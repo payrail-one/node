@@ -296,6 +296,8 @@ impl LmdbTailStateStore {
             self.nonces,
             self.operation_sequence,
             self.account_statuses,
+            self.contracts,
+            self.contract_state,
         ] {
             database.clear(transaction)?;
         }
@@ -307,7 +309,9 @@ impl LmdbTailStateStore {
             transaction,
             &rows.operation_sequence,
         )?;
-        write_rows(self.account_statuses, transaction, &rows.account_statuses)
+        write_rows(self.account_statuses, transaction, &rows.account_statuses)?;
+        write_rows(self.contracts, transaction, &rows.contracts)?;
+        write_rows(self.contract_state, transaction, &rows.contract_state)
     }
 
     fn sync_ledger_rows(
@@ -330,7 +334,9 @@ impl LmdbTailStateStore {
             transaction,
             &rows.operation_sequence,
         )?;
-        sync_rows(self.account_statuses, transaction, &rows.account_statuses)
+        sync_rows(self.account_statuses, transaction, &rows.account_statuses)?;
+        sync_rows(self.contracts, transaction, &rows.contracts)?;
+        sync_rows(self.contract_state, transaction, &rows.contract_state)
     }
 
     fn require_checkpoint_matches_authenticated_root(

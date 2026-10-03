@@ -8,6 +8,8 @@ pub enum OperationKind {
     SponsoredTransfer,
     BatchTransfer,
     SponsoredBatchTransfer,
+    ContractDeploy,
+    ContractCall,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

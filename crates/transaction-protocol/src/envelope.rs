@@ -1,13 +1,14 @@
 use ledger_core::{
-    AccountId, AssetId, Authorization, AuthorizedOperation, IdempotencyKey, LedgerError,
-    MAX_BATCH_ITEMS, NetworkId, SignatureBytes, SignedOperation, Transfer, TransferBatch,
+    AccountId, AssetId, Authorization, AuthorizedOperation, ContractCall, ContractDeploy,
+    ContractId, IdempotencyKey, LedgerError, MAX_BATCH_ITEMS, MAX_CONTRACT_ARGS_BYTES,
+    MAX_CONTRACT_CODE_BYTES, NetworkId, SignatureBytes, SignedOperation, Transfer, TransferBatch,
     TransferItem,
 };
 
 use crate::{ProtocolError, decoder::Decoder};
 
 const ENVELOPE_DOMAIN: &[u8; 16] = b"ledger.envelope\0";
-pub const MAX_ENVELOPE_BYTES: usize = 8 * 1024;
+pub const MAX_ENVELOPE_BYTES: usize = 32 * 1024;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SignedOperationCodec;
@@ -109,8 +110,74 @@ fn decode_operation(decoder: &mut Decoder<'_>) -> Result<AuthorizedOperation, Pr
             batch: decode_batch(decoder)?,
             fee_payer: AccountId::new(decoder.read_array()?),
         }),
+        4 => Ok(AuthorizedOperation::ContractDeploy(decode_contract_deploy(
+            decoder,
+        )?)),
+        5 => Ok(AuthorizedOperation::ContractCall(decode_contract_call(
+            decoder,
+        )?)),
         _ => Err(ProtocolError::UnsupportedOperation),
     }
+}
+
+fn decode_contract_deploy(decoder: &mut Decoder<'_>) -> Result<ContractDeploy, ProtocolError> {
+    let network = NetworkId::new(decoder.read_array()?);
+    let idempotency_key = IdempotencyKey::new(decoder.read_array()?);
+    let asset = AssetId::new(decoder.read_array()?);
+    let owner = AccountId::new(decoder.read_array()?);
+    let salt = decoder.read_array()?;
+    let code_length =
+        usize::try_from(decoder.read_u32()?).map_err(|_| ProtocolError::EnvelopeTooLarge)?;
+    if code_length == 0 || code_length > MAX_CONTRACT_CODE_BYTES {
+        return Err(ProtocolError::InvalidOperation);
+    }
+    let code = decoder.read_slice(code_length)?.to_vec();
+    Ok(ContractDeploy {
+        network,
+        idempotency_key,
+        asset,
+        owner,
+        salt,
+        code,
+        fee: decoder.read_u128()?,
+        nonce: decoder.read_u64()?,
+        valid_until_height: decoder.read_u64()?,
+    })
+}
+
+fn decode_contract_call(decoder: &mut Decoder<'_>) -> Result<ContractCall, ProtocolError> {
+    let network = NetworkId::new(decoder.read_array()?);
+    let idempotency_key = IdempotencyKey::new(decoder.read_array()?);
+    let asset = AssetId::new(decoder.read_array()?);
+    let caller = AccountId::new(decoder.read_array()?);
+    let contract = ContractId::new(decoder.read_array()?);
+    let entrypoint_length = usize::from(decoder.read_u8()?);
+    if entrypoint_length == 0 || entrypoint_length > 32 {
+        return Err(ProtocolError::InvalidOperation);
+    }
+    let entrypoint = std::str::from_utf8(decoder.read_slice(entrypoint_length)?)
+        .map_err(|_| ProtocolError::InvalidOperation)?
+        .to_owned();
+    let args_length =
+        usize::try_from(decoder.read_u32()?).map_err(|_| ProtocolError::EnvelopeTooLarge)?;
+    if args_length > MAX_CONTRACT_ARGS_BYTES {
+        return Err(ProtocolError::InvalidOperation);
+    }
+    let args = decoder.read_slice(args_length)?.to_vec();
+    Ok(ContractCall {
+        network,
+        idempotency_key,
+        asset,
+        caller,
+        contract,
+        entrypoint,
+        args,
+        attached_amount: decoder.read_u128()?,
+        fee: decoder.read_u128()?,
+        execution_limit: decoder.read_u64()?,
+        nonce: decoder.read_u64()?,
+        valid_until_height: decoder.read_u64()?,
+    })
 }
 
 fn decode_transfer(decoder: &mut Decoder<'_>) -> Result<Transfer, ProtocolError> {

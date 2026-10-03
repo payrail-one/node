@@ -24,7 +24,7 @@ pub(crate) const REGISTRY_AUTHORITY_KEY: &[u8] = b"ledger-registry-authority";
 pub(crate) const AUTHENTICATED_STATE_KEY: &[u8] = b"authenticated-state";
 pub(crate) const COMMITMENT_POLICY_KEY: &[u8] = b"state-commitment-policy";
 pub(crate) const PROTOCOL_CONFIG_DIGEST_KEY: &[u8] = b"protocol-config-digest";
-const MAX_DATABASES: u32 = 16;
+const MAX_DATABASES: u32 = 18;
 
 #[derive(Debug)]
 pub struct LmdbTailStateStore {
@@ -38,6 +38,8 @@ pub struct LmdbTailStateStore {
     pub(crate) nonces: Database<Bytes, Bytes>,
     pub(crate) operation_sequence: Database<Bytes, Bytes>,
     pub(crate) account_statuses: Database<Bytes, Bytes>,
+    pub(crate) contracts: Database<Bytes, Bytes>,
+    pub(crate) contract_state: Database<Bytes, Bytes>,
     pub(crate) authenticated_tree: AuthenticatedTreeDatabases,
     pub(crate) network: NetworkId,
     pub(crate) commitment_policy: StateCommitmentPolicy,
@@ -112,6 +114,9 @@ impl LmdbTailStateStore {
             env.create_database(&mut transaction, Some("ledger_operation_sequence"))?;
         let account_statuses =
             env.create_database(&mut transaction, Some("ledger_account_statuses"))?;
+        let contracts = env.create_database(&mut transaction, Some("ledger_contracts"))?;
+        let contract_state =
+            env.create_database(&mut transaction, Some("ledger_contract_state"))?;
         let authenticated_tree = AuthenticatedTreeDatabases::create(&env, &mut transaction)?;
         match metadata.get(&transaction, NETWORK_KEY)? {
             Some(stored) if stored != network.as_bytes() => {
@@ -136,6 +141,8 @@ impl LmdbTailStateStore {
             nonces,
             operation_sequence,
             account_statuses,
+            contracts,
+            contract_state,
             authenticated_tree,
             network,
             commitment_policy,

@@ -2,7 +2,8 @@ mod support;
 
 use ed25519_dalek::SigningKey;
 use ledger_core::{
-    AccountId, IdempotencyKey, Ledger, LedgerError, SignatureBytes, SignedOperation, Transfer,
+    AccountId, ContractDeploy, IdempotencyKey, Ledger, LedgerError, SignatureBytes,
+    SignedOperation, Transfer,
 };
 use ledger_runtime_core::{
     CompactLedgerBlockManifest, LedgerAuthenticatedState, LedgerBlockCodec, LedgerBlockExecutor,
@@ -45,6 +46,39 @@ fn state_codec_round_trips_validated_consensus_state() {
     let decoded = LedgerStateCodec::decode(NETWORK, &encoded).unwrap();
 
     assert_eq!(decoded, snapshot);
+    assert_eq!(LedgerStateCodec::encode(&decoded).unwrap(), encoded);
+    assert_eq!(&encoded[..16], b"ledger.state.v2\0");
+}
+
+#[test]
+fn contract_state_uses_v3_without_rewriting_contract_free_v2_state() {
+    let owner = AccountId::new(sender_key().verifying_key().to_bytes());
+    let mut ledger = funded_ledger(owner);
+    let mut code = b"PRC1".to_vec();
+    code.extend([1, 4]);
+    code.extend(b"noop");
+    code.extend(1_u16.to_be_bytes());
+    code.push(0);
+    ledger
+        .deploy_contract(
+            owner,
+            ContractDeploy {
+                network: NETWORK,
+                idempotency_key: IdempotencyKey::new([77; 32]),
+                asset: TOKEN,
+                owner,
+                salt: [78; 32],
+                code,
+                fee: 1,
+                nonce: 0,
+                valid_until_height: 100,
+            },
+        )
+        .unwrap();
+
+    let encoded = LedgerStateCodec::encode(&ledger.snapshot()).unwrap();
+    assert_eq!(&encoded[..16], b"ledger.state.v3\0");
+    let decoded = LedgerStateCodec::decode(NETWORK, &encoded).unwrap();
     assert_eq!(LedgerStateCodec::encode(&decoded).unwrap(), encoded);
 }
 

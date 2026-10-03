@@ -1,5 +1,6 @@
 use crate::{
-    AccountId, IdempotencyKey, Ledger, LedgerError, MAX_BATCH_ITEMS, NetworkId, Nonce, OperationId,
+    AccountId, ContractCall, ContractDeploy, IdempotencyKey, Ledger, LedgerError, MAX_BATCH_ITEMS,
+    MAX_CONTRACT_ARGS_BYTES, MAX_CONTRACT_CODE_BYTES, NetworkId, Nonce, OperationId,
     OperationReceipt, Transfer, TransferBatch, TransferItem,
 };
 use sha2::{Digest, Sha256};
@@ -79,6 +80,8 @@ pub enum AuthorizedOperation {
         batch: TransferBatch,
         fee_payer: AccountId,
     },
+    ContractDeploy(ContractDeploy),
+    ContractCall(ContractCall),
 }
 
 impl AuthorizedOperation {
@@ -87,6 +90,8 @@ impl AuthorizedOperation {
         match self {
             Self::Transfer(transfer) | Self::SponsoredTransfer { transfer, .. } => transfer.from,
             Self::TransferBatch(batch) | Self::SponsoredBatchTransfer { batch, .. } => batch.from,
+            Self::ContractDeploy(deploy) => deploy.owner,
+            Self::ContractCall(call) => call.caller,
         }
     }
 
@@ -97,6 +102,8 @@ impl AuthorizedOperation {
             Self::TransferBatch(batch) | Self::SponsoredBatchTransfer { batch, .. } => {
                 batch.network
             }
+            Self::ContractDeploy(deploy) => deploy.network,
+            Self::ContractCall(call) => call.network,
         }
     }
 
@@ -109,6 +116,8 @@ impl AuthorizedOperation {
             Self::TransferBatch(batch) | Self::SponsoredBatchTransfer { batch, .. } => {
                 batch.idempotency_key
             }
+            Self::ContractDeploy(deploy) => deploy.idempotency_key,
+            Self::ContractCall(call) => call.idempotency_key,
         }
     }
 
@@ -117,6 +126,8 @@ impl AuthorizedOperation {
         match self {
             Self::Transfer(transfer) | Self::SponsoredTransfer { transfer, .. } => transfer.nonce,
             Self::TransferBatch(batch) | Self::SponsoredBatchTransfer { batch, .. } => batch.nonce,
+            Self::ContractDeploy(deploy) => deploy.nonce,
+            Self::ContractCall(call) => call.nonce,
         }
     }
 
@@ -129,6 +140,8 @@ impl AuthorizedOperation {
             Self::TransferBatch(batch) | Self::SponsoredBatchTransfer { batch, .. } => {
                 batch.valid_until_height
             }
+            Self::ContractDeploy(deploy) => deploy.valid_until_height,
+            Self::ContractCall(call) => call.valid_until_height,
         }
     }
 
@@ -137,6 +150,8 @@ impl AuthorizedOperation {
         match self {
             Self::Transfer(transfer) | Self::SponsoredTransfer { transfer, .. } => transfer.fee,
             Self::TransferBatch(batch) | Self::SponsoredBatchTransfer { batch, .. } => batch.fee,
+            Self::ContractDeploy(deploy) => deploy.fee,
+            Self::ContractCall(call) => call.fee,
         }
     }
 
@@ -145,6 +160,8 @@ impl AuthorizedOperation {
         match self {
             Self::Transfer(transfer) | Self::SponsoredTransfer { transfer, .. } => transfer.asset,
             Self::TransferBatch(batch) | Self::SponsoredBatchTransfer { batch, .. } => batch.asset,
+            Self::ContractDeploy(deploy) => deploy.asset,
+            Self::ContractCall(call) => call.asset,
         }
     }
 
@@ -155,13 +172,18 @@ impl AuthorizedOperation {
             Self::TransferBatch(_) => crate::OperationKind::BatchTransfer,
             Self::SponsoredTransfer { .. } => crate::OperationKind::SponsoredTransfer,
             Self::SponsoredBatchTransfer { .. } => crate::OperationKind::SponsoredBatchTransfer,
+            Self::ContractDeploy(_) => crate::OperationKind::ContractDeploy,
+            Self::ContractCall(_) => crate::OperationKind::ContractCall,
         }
     }
 
     #[must_use]
     pub const fn fee_payer(&self) -> Option<AccountId> {
         match self {
-            Self::Transfer(_) | Self::TransferBatch(_) => None,
+            Self::Transfer(_)
+            | Self::TransferBatch(_)
+            | Self::ContractDeploy(_)
+            | Self::ContractCall(_) => None,
             Self::SponsoredTransfer { fee_payer, .. }
             | Self::SponsoredBatchTransfer { fee_payer, .. } => Some(*fee_payer),
         }
@@ -212,6 +234,14 @@ impl AuthorizedOperation {
                 output.push(3);
                 encode_batch(&mut output, batch)?;
                 output.extend_from_slice(fee_payer.as_bytes());
+            }
+            Self::ContractDeploy(deploy) => {
+                output.push(4);
+                encode_contract_deploy(&mut output, deploy)?;
+            }
+            Self::ContractCall(call) => {
+                output.push(5);
+                encode_contract_call(&mut output, call)?;
             }
         }
         Ok(output)
@@ -493,6 +523,12 @@ impl Ledger {
                     fee_payer,
                     batch,
                 ),
+            AuthorizedOperation::ContractDeploy(deploy) => {
+                self.deploy_contract(signed.sender_authorization.signer, deploy)
+            }
+            AuthorizedOperation::ContractCall(call) => {
+                self.call_contract(signed.sender_authorization.signer, call)
+            }
         }
     }
 
@@ -597,6 +633,55 @@ fn encode_batch(output: &mut Vec<u8>, batch: &TransferBatch) -> Result<(), Ledge
     output.extend_from_slice(&batch.fee.to_be_bytes());
     output.extend_from_slice(&batch.nonce.to_be_bytes());
     output.extend_from_slice(&batch.valid_until_height.to_be_bytes());
+    Ok(())
+}
+
+fn encode_contract_deploy(
+    output: &mut Vec<u8>,
+    deploy: &ContractDeploy,
+) -> Result<(), LedgerError> {
+    if deploy.code.is_empty() || deploy.code.len() > MAX_CONTRACT_CODE_BYTES {
+        return Err(LedgerError::InvalidContractCode);
+    }
+    output.extend_from_slice(deploy.network.as_bytes());
+    output.extend_from_slice(deploy.idempotency_key.as_bytes());
+    output.extend_from_slice(deploy.asset.as_bytes());
+    output.extend_from_slice(deploy.owner.as_bytes());
+    output.extend_from_slice(&deploy.salt);
+    let length = u32::try_from(deploy.code.len()).map_err(|_| LedgerError::InvalidContractCode)?;
+    output.extend_from_slice(&length.to_be_bytes());
+    output.extend_from_slice(&deploy.code);
+    output.extend_from_slice(&deploy.fee.to_be_bytes());
+    output.extend_from_slice(&deploy.nonce.to_be_bytes());
+    output.extend_from_slice(&deploy.valid_until_height.to_be_bytes());
+    Ok(())
+}
+
+fn encode_contract_call(output: &mut Vec<u8>, call: &ContractCall) -> Result<(), LedgerError> {
+    if call.entrypoint.is_empty()
+        || call.entrypoint.len() > 32
+        || call.args.len() > MAX_CONTRACT_ARGS_BYTES
+    {
+        return Err(LedgerError::InvalidContractArguments);
+    }
+    output.extend_from_slice(call.network.as_bytes());
+    output.extend_from_slice(call.idempotency_key.as_bytes());
+    output.extend_from_slice(call.asset.as_bytes());
+    output.extend_from_slice(call.caller.as_bytes());
+    output.extend_from_slice(call.contract.as_bytes());
+    let name_length =
+        u8::try_from(call.entrypoint.len()).map_err(|_| LedgerError::InvalidContractArguments)?;
+    output.push(name_length);
+    output.extend_from_slice(call.entrypoint.as_bytes());
+    let args_length =
+        u32::try_from(call.args.len()).map_err(|_| LedgerError::InvalidContractArguments)?;
+    output.extend_from_slice(&args_length.to_be_bytes());
+    output.extend_from_slice(&call.args);
+    output.extend_from_slice(&call.attached_amount.to_be_bytes());
+    output.extend_from_slice(&call.fee.to_be_bytes());
+    output.extend_from_slice(&call.execution_limit.to_be_bytes());
+    output.extend_from_slice(&call.nonce.to_be_bytes());
+    output.extend_from_slice(&call.valid_until_height.to_be_bytes());
     Ok(())
 }
 

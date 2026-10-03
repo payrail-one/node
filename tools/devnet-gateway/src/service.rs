@@ -7,8 +7,8 @@ use account_address::AddressCodec;
 use ed25519_dalek::{Signer, SigningKey};
 use ledger_core::{
     AccountId, AssetClass, AssetDefinition, AssetId, AssetStatus, Authorization, AuthorizationRole,
-    AuthorizedOperation, BackingRequirement, IdempotencyKey, Ledger, NetworkId, OperationOutcome,
-    SignatureBytes, SignedOperation, Transfer,
+    AuthorizedOperation, BackingRequirement, IdempotencyKey, Ledger, NetworkId, SignatureBytes,
+    SignedOperation, Transfer,
 };
 use ledger_runtime_core::{LedgerBlockCodec, LedgerBlockExecutor, LedgerStateCodec, state_root};
 use merchant_checkout_core::CheckoutId;
@@ -22,9 +22,10 @@ use crate::{
     DevnetError,
     checkout::{create_definition, now_ms, parse_id, validate_payment, validate_transfer, view},
     codec::{decode_bounded_hex, encode_hex},
+    contract_view::{contract_execution_view, contract_view, transaction_view},
     index::ExplorerIndex,
     model::{
-        AccountStateView, CheckoutView, ExplorerOverviewView, FinalizedBlockView,
+        AccountStateView, CheckoutView, ContractView, ExplorerOverviewView, FinalizedBlockView,
         FinalizedTransactionView, NetworkAssetView, NetworkStatusView, SubmissionResultView,
         SyncBlockView, SyncBootstrapView,
     },
@@ -200,6 +201,16 @@ impl DevnetService {
             .decode(address)
             .map(|decoded| decoded.account)
             .map_err(|_| DevnetError::InvalidAddress)
+    }
+
+    /// Reads deployed code and canonical state at the finalized tip.
+    ///
+    /// # Errors
+    ///
+    /// Rejects malformed identifiers, unknown contracts or unavailable state.
+    pub fn contract(&self, id: &str) -> Result<ContractView, DevnetError> {
+        let ledger = self.ledger()?;
+        contract_view(&self.address_codec, &ledger, id, self.checkpoint.height)
     }
 
     /// Signs and finalizes one bounded test-asset transfer from the faucet.
@@ -446,7 +457,12 @@ impl DevnetService {
     }
 
     fn finalize(&mut self, signed: &SignedOperation) -> Result<SubmissionResultView, DevnetError> {
-        if !matches!(signed.operation, AuthorizedOperation::Transfer(_)) {
+        if !matches!(
+            signed.operation,
+            AuthorizedOperation::Transfer(_)
+                | AuthorizedOperation::ContractDeploy(_)
+                | AuthorizedOperation::ContractCall(_)
+        ) {
             return Err(DevnetError::UnsupportedOperation);
         }
         let payload = LedgerBlockCodec::encode(std::slice::from_ref(signed))
@@ -512,14 +528,13 @@ impl DevnetService {
         let [signed] = operations.as_slice() else {
             return Err(DevnetError::InvalidSyncBlock);
         };
-        let AuthorizedOperation::Transfer(transfer) = signed.operation else {
-            return Err(DevnetError::UnsupportedOperation);
-        };
         let [receipt] = executed.receipts.as_slice() else {
             return Err(DevnetError::InternalInvariant);
         };
         let checkpoint = verified.checkpoint();
-        let transaction = transaction_view(&self.address_codec, transfer, *receipt, checkpoint)?;
+        let transaction =
+            transaction_view(&self.address_codec, &signed.operation, *receipt, checkpoint)?;
+        let contract = contract_execution_view(&signed.operation, &executed.events);
         let block = block_view(checkpoint, 1);
         let prepared =
             self.index
@@ -537,10 +552,13 @@ impl DevnetService {
             self.persistence.rebuild_receipts(&self.executor)?;
         }
         self.index.commit(prepared)?;
-        self.record_checkout_settlement(transfer, transaction.clone())?;
+        if let AuthorizedOperation::Transfer(transfer) = signed.operation {
+            self.record_checkout_settlement(transfer, transaction.clone())?;
+        }
         Ok(SubmissionResultView {
             transaction,
             checkpoint: block,
+            contract,
         })
     }
 
@@ -615,21 +633,23 @@ fn rebuild_presentation(
         let [signed] = operations.as_slice() else {
             return Err(DevnetError::InternalInvariant);
         };
-        let AuthorizedOperation::Transfer(transfer) = signed.operation else {
-            return Err(DevnetError::InternalInvariant);
-        };
         let [receipt] = executed.receipts.as_slice() else {
             return Err(DevnetError::InternalInvariant);
         };
-        if transfer.from == faucet {
+        if let AuthorizedOperation::Transfer(transfer) = signed.operation
+            && transfer.from == faucet
+        {
             funded.insert(transfer.to);
         }
-        let transaction = transaction_view(addresses, transfer, *receipt, archived.checkpoint)?;
-        let checkout_id = CheckoutId::new(*transfer.idempotency_key.as_bytes());
-        if let Some(checkout) = persistence.find_checkout(checkout_id)?
-            && validate_transfer(&checkout, transfer).is_ok()
-        {
-            settled_checkouts.insert(checkout_id, transaction.clone());
+        let transaction =
+            transaction_view(addresses, &signed.operation, *receipt, archived.checkpoint)?;
+        if let AuthorizedOperation::Transfer(transfer) = signed.operation {
+            let checkout_id = CheckoutId::new(*transfer.idempotency_key.as_bytes());
+            if let Some(checkout) = persistence.find_checkout(checkout_id)?
+                && validate_transfer(&checkout, transfer).is_ok()
+            {
+                settled_checkouts.insert(checkout_id, transaction.clone());
+            }
         }
         let block = block_view(archived.checkpoint, 1);
         let prepared = index.prepare_append(previous, archived.checkpoint, block, transaction)?;
@@ -646,31 +666,6 @@ fn rebuild_presentation(
 fn decode_signed(envelope: &str) -> Result<SignedOperation, DevnetError> {
     let bytes = decode_bounded_hex(envelope, MAX_ENVELOPE_BYTES)?;
     SignedOperationCodec::decode(&bytes).map_err(|_| DevnetError::InvalidEnvelope)
-}
-
-fn transaction_view(
-    addresses: &AddressCodec,
-    transfer: Transfer,
-    receipt: ledger_core::OperationReceipt,
-    checkpoint: FinalizedCheckpoint,
-) -> Result<FinalizedTransactionView, DevnetError> {
-    Ok(FinalizedTransactionView {
-        id: encode_hex(receipt.operation_id.as_bytes()),
-        block_height: checkpoint.height.to_string(),
-        operation_index: receipt.operation_index.to_string(),
-        from: addresses
-            .encode(transfer.from)
-            .map_err(|_| DevnetError::InternalInvariant)?,
-        to: addresses
-            .encode(transfer.to)
-            .map_err(|_| DevnetError::InternalInvariant)?,
-        amount: transfer.amount.to_string(),
-        fee: transfer.fee.to_string(),
-        outcome: match receipt.outcome {
-            OperationOutcome::Applied => "applied",
-            OperationOutcome::Expired => "expired",
-        },
-    })
 }
 
 fn block_view(checkpoint: FinalizedCheckpoint, transaction_count: usize) -> FinalizedBlockView {

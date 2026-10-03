@@ -1,6 +1,6 @@
 use crate::{
-    AccountId, AccountStatus, AssetId, AssetStatus, Balance, IdempotencyKey, Nonce, OperationId,
-    OperationKind, TransferItem,
+    AccountId, AccountStatus, AssetId, AssetStatus, Balance, ContractId, IdempotencyKey, Nonce,
+    OperationId, OperationKind, TransferItem,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -61,5 +61,24 @@ pub enum Event {
         asset: AssetId,
         account: AccountId,
         status: AccountStatus,
+    },
+    ContractDeployed {
+        operation_id: OperationId,
+        contract: ContractId,
+        owner: AccountId,
+        code_hash: [u8; 32],
+    },
+    ContractCalled {
+        operation_id: OperationId,
+        contract: ContractId,
+        caller: AccountId,
+        entrypoint: String,
+        attached_amount: Balance,
+        execution_units: u64,
+    },
+    ContractEmitted {
+        operation_id: OperationId,
+        contract: ContractId,
+        topic: Vec<u8>,
     },
 }

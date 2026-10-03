@@ -20,6 +20,8 @@ pub enum LedgerStateNamespace {
     Nonce = 4,
     OperationSequence = 5,
     AccountStatus = 6,
+    Contract = 7,
+    ContractState = 8,
 }
 
 impl LedgerStateNamespace {
@@ -322,6 +324,8 @@ pub fn authenticated_state_entries(
         rows.nonces.len(),
         rows.operation_sequence.len(),
         rows.account_statuses.len(),
+        rows.contracts.len(),
+        rows.contract_state.len(),
     ]
     .into_iter()
     .try_fold(2_usize, usize::checked_add)
@@ -353,6 +357,16 @@ pub fn authenticated_state_entries(
         &mut entries,
         LedgerStateNamespace::OperationSequence,
         &rows.operation_sequence,
+    );
+    append_entries(
+        &mut entries,
+        LedgerStateNamespace::Contract,
+        &rows.contracts,
+    );
+    append_entries(
+        &mut entries,
+        LedgerStateNamespace::ContractState,
+        &rows.contract_state,
     );
     append_entries(
         &mut entries,
@@ -418,6 +432,18 @@ pub fn authenticated_state_delta(
         LedgerStateNamespace::AccountStatus,
         &previous.account_statuses,
         &next.account_statuses,
+    )?;
+    diff_rows(
+        &mut changes,
+        LedgerStateNamespace::Contract,
+        &previous.contracts,
+        &next.contracts,
+    )?;
+    diff_rows(
+        &mut changes,
+        LedgerStateNamespace::ContractState,
+        &previous.contract_state,
+        &next.contract_state,
     )?;
     Ok(changes)
 }

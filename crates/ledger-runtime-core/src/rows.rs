@@ -1,7 +1,7 @@
 use ledger_core::{
     AccountId, AccountStatus, AssetClass, AssetDefinition, AssetId, AssetStatus,
-    BackingRequirement, Ledger, LedgerSnapshot, NetworkId, SnapshotAccountStatus, SnapshotAsset,
-    SnapshotBalance, SnapshotNonce,
+    BackingRequirement, ContractId, ContractRecord, ContractStateEntry, Ledger, LedgerSnapshot,
+    NetworkId, SnapshotAccountStatus, SnapshotAsset, SnapshotBalance, SnapshotNonce,
 };
 
 use crate::{RuntimeError, decoder::Decoder};
@@ -24,6 +24,8 @@ pub struct LedgerStateRows {
     pub nonces: Vec<LedgerRow>,
     pub operation_sequence: Vec<LedgerRow>,
     pub account_statuses: Vec<LedgerRow>,
+    pub contracts: Vec<LedgerRow>,
+    pub contract_state: Vec<LedgerRow>,
 }
 
 impl LedgerStateRows {
@@ -48,6 +50,16 @@ impl LedgerStateRows {
             nonces: canonical.nonces.iter().map(nonce_row).collect(),
             operation_sequence: vec![operation_sequence_row(canonical.next_operation_index)],
             account_statuses: canonical.account_statuses.iter().map(status_row).collect(),
+            contracts: canonical
+                .contracts
+                .iter()
+                .map(contract_row)
+                .collect::<Result<_, _>>()?,
+            contract_state: canonical
+                .contract_state
+                .iter()
+                .map(contract_state_row)
+                .collect(),
         })
     }
 
@@ -84,11 +96,65 @@ impl LedgerStateRows {
                 .iter()
                 .map(decode_status_row)
                 .collect::<Result<_, _>>()?,
+            contracts: self
+                .contracts
+                .iter()
+                .map(decode_contract_row)
+                .collect::<Result<_, _>>()?,
+            contract_state: self
+                .contract_state
+                .iter()
+                .map(decode_contract_state_row)
+                .collect::<Result<_, _>>()?,
         };
         Ledger::from_snapshot(expected_network, snapshot)
             .map(|ledger| ledger.snapshot())
             .map_err(RuntimeError::InvalidSnapshot)
     }
+}
+
+fn contract_row(contract: &ContractRecord) -> Result<LedgerRow, RuntimeError> {
+    let code_length =
+        u16::try_from(contract.code.len()).map_err(|_| RuntimeError::LengthOverflow)?;
+    let mut value = Vec::with_capacity(34 + contract.code.len());
+    value.extend_from_slice(contract.owner.as_bytes());
+    value.extend_from_slice(&code_length.to_be_bytes());
+    value.extend_from_slice(&contract.code);
+    Ok(LedgerRow {
+        key: contract.id.as_bytes().to_vec(),
+        value,
+    })
+}
+
+fn decode_contract_row(row: &LedgerRow) -> Result<ContractRecord, RuntimeError> {
+    let id = ContractId::new(array(&row.key)?);
+    let mut decoder = Decoder::new(&row.value);
+    let owner = AccountId::new(decoder.read_array()?);
+    let code_length = usize::from(decoder.read_u16()?);
+    let code = decoder.read_slice(code_length)?.to_vec();
+    decoder.finish()?;
+    Ok(ContractRecord { id, owner, code })
+}
+
+fn contract_state_row(entry: &ContractStateEntry) -> LedgerRow {
+    let mut key = Vec::with_capacity(32 + entry.key.len());
+    key.extend_from_slice(entry.contract.as_bytes());
+    key.extend_from_slice(&entry.key);
+    LedgerRow {
+        key,
+        value: entry.value.to_be_bytes().to_vec(),
+    }
+}
+
+fn decode_contract_state_row(row: &LedgerRow) -> Result<ContractStateEntry, RuntimeError> {
+    if row.key.len() <= 32 || row.key.len() > 64 {
+        return Err(RuntimeError::UnsupportedValue);
+    }
+    Ok(ContractStateEntry {
+        contract: ContractId::new(array(&row.key[..32])?),
+        key: row.key[32..].to_vec(),
+        value: u128::from_be_bytes(array(&row.value)?),
+    })
 }
 
 fn asset_row(asset: &SnapshotAsset) -> Result<LedgerRow, RuntimeError> {

@@ -144,6 +144,8 @@ fn operation_kind(kind: OperationKind) -> u8 {
         OperationKind::SponsoredTransfer => 1,
         OperationKind::BatchTransfer => 2,
         OperationKind::SponsoredBatchTransfer => 3,
+        OperationKind::ContractDeploy => 4,
+        OperationKind::ContractCall => 5,
     }
 }
 
@@ -153,6 +155,8 @@ fn decode_operation_kind(value: u8) -> Result<OperationKind, ReceiptIndexStoreEr
         1 => Ok(OperationKind::SponsoredTransfer),
         2 => Ok(OperationKind::BatchTransfer),
         3 => Ok(OperationKind::SponsoredBatchTransfer),
+        4 => Ok(OperationKind::ContractDeploy),
+        5 => Ok(OperationKind::ContractCall),
         _ => Err(ReceiptIndexStoreError::CorruptRecord),
     }
 }

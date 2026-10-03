@@ -98,7 +98,9 @@ impl PaymentOperationSigner for TestServices {
                     transfer.amount += 1;
                 }
                 AuthorizedOperation::TransferBatch(_)
-                | AuthorizedOperation::SponsoredBatchTransfer { .. } => {}
+                | AuthorizedOperation::SponsoredBatchTransfer { .. }
+                | AuthorizedOperation::ContractDeploy(_)
+                | AuthorizedOperation::ContractCall(_) => {}
             }
         }
         let sender = operation.sender();

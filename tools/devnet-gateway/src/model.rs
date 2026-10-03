@@ -42,6 +42,7 @@ pub struct FinalizedTransactionView {
     pub amount: String,
     pub fee: String,
     pub outcome: &'static str,
+    pub kind: &'static str,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -64,6 +65,36 @@ pub struct ExplorerOverviewView {
 pub struct SubmissionResultView {
     pub transaction: FinalizedTransactionView,
     pub checkpoint: FinalizedBlockView,
+    pub contract: Option<ContractExecutionView>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContractExecutionView {
+    pub contract_id: String,
+    pub entrypoint: Option<String>,
+    pub execution_units: Option<String>,
+    pub code_hash: Option<String>,
+    pub events: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContractStateEntryView {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContractView {
+    pub id: String,
+    pub owner: String,
+    pub code: String,
+    pub code_hash: String,
+    pub balance: String,
+    pub state: Vec<ContractStateEntryView>,
+    pub finalized_height: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]

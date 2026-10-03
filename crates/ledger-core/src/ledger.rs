@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 mod account;
+mod contract;
 mod expiry;
 mod payment;
 pub mod snapshot;
@@ -19,6 +20,8 @@ pub struct Ledger {
     nonces: BTreeMap<AccountId, Nonce>,
     next_operation_index: u64,
     account_statuses: BTreeMap<(AssetId, AccountId), AccountStatus>,
+    contracts: BTreeMap<crate::ContractId, crate::ContractRecord>,
+    contract_state: BTreeMap<(crate::ContractId, Vec<u8>), u128>,
     events: Vec<Event>,
 }
 
@@ -33,6 +36,8 @@ impl Ledger {
             nonces: BTreeMap::new(),
             next_operation_index: 0,
             account_statuses: BTreeMap::new(),
+            contracts: BTreeMap::new(),
+            contract_state: BTreeMap::new(),
             events: Vec::new(),
         }
     }

@@ -387,6 +387,8 @@ const fn operation_nonce(operation: &AuthorizedOperation) -> u64 {
         | AuthorizedOperation::SponsoredTransfer { transfer, .. } => transfer.nonce,
         AuthorizedOperation::TransferBatch(batch)
         | AuthorizedOperation::SponsoredBatchTransfer { batch, .. } => batch.nonce,
+        AuthorizedOperation::ContractDeploy(deploy) => deploy.nonce,
+        AuthorizedOperation::ContractCall(call) => call.nonce,
     }
 }
 

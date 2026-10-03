@@ -1,4 +1,4 @@
-use ledger_core::{Ledger, LedgerSnapshot, NetworkId, OperationReceipt, SignatureVerifier};
+use ledger_core::{Event, Ledger, LedgerSnapshot, NetworkId, OperationReceipt, SignatureVerifier};
 use state_sync_core::{BlockHash, FinalizedCheckpoint};
 use tail_sync_core::{PreparedTailTransition, TailCommitment, TailTransitionExecutor};
 use transaction_verification_core::SharedVerifiedOperationCache;
@@ -15,6 +15,7 @@ use crate::{
 pub struct ExecutedLedgerBlock {
     pub transition: PreparedTailTransition,
     pub receipts: Vec<OperationReceipt>,
+    pub events: Vec<Event>,
 }
 
 /// A fully executed block plus its side-effect-free authenticated-state update.
@@ -39,6 +40,7 @@ struct CandidateExecution {
     snapshot: LedgerSnapshot,
     state: Vec<u8>,
     receipts: Vec<OperationReceipt>,
+    events: Vec<Event>,
     next_height: u64,
     block_hash: BlockHash,
 }
@@ -54,6 +56,7 @@ impl CandidateExecution {
                 state: self.state,
             },
             receipts: self.receipts,
+            events: self.events,
         }
     }
 }
@@ -231,11 +234,13 @@ impl<V: SignatureVerifier + Sync> LedgerBlockExecutor<V> {
             receipts.push(receipt);
         }
         let snapshot = candidate.snapshot();
+        let events = candidate.events().to_vec();
         let state = LedgerStateCodec::encode(&snapshot)?;
         Ok(CandidateExecution {
             snapshot,
             state,
             receipts,
+            events,
             next_height,
             block_hash: block_hash(previous.block_hash, payload),
         })
