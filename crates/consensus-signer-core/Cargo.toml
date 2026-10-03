@@ -1,0 +1,15 @@
+[package]
+name = "consensus-signer-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+ledger-core = { path = "../ledger-core" }
+network-membership-core = { path = "../network-membership-core" }
+state-sync-core = { path = "../state-sync-core" }
+
+[lints]
+workspace = true

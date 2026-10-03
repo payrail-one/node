@@ -9,17 +9,23 @@ publish = false
 [dependencies]
 account-address = { path = "../../crates/account-address" }
 axum = { version = "=0.8.9", default-features = false, features = ["http1", "json", "query", "tokio", "ws"] }
+consensus-signer-core = { path = "../../crates/consensus-signer-core" }
+consensus-signer-journal-fs = { path = "../../crates/consensus-signer-journal-fs" }
 ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["zeroize"] }
+finality-auth-ed25519 = { path = "../../crates/finality-auth-ed25519" }
+finality-proof-core = { path = "../../crates/finality-proof-core" }
 ledger-core = { path = "../../crates/ledger-core" }
 ledger-runtime-core = { path = "../../crates/ledger-runtime-core" }
 merchant-checkout-core = { path = "../../crates/merchant-checkout-core" }
 merchant-checkout-lmdb = { path = "../../crates/merchant-checkout-lmdb" }
 network-config-auth-ed25519 = { path = "../../crates/network-config-auth-ed25519" }
 network-config-core = { path = "../../crates/network-config-core" }
+network-membership-core = { path = "../../crates/network-membership-core" }
 payment-idempotency-core = { path = "../../crates/payment-idempotency-core" }
 receipt-index-core = { path = "../../crates/receipt-index-core" }
 receipt-index-lmdb = { path = "../../crates/receipt-index-lmdb" }
 receipt-rebuild-core = { path = "../../crates/receipt-rebuild-core" }
+reqwest = { version = "=0.13.2", default-features = false, features = ["blocking", "json", "rustls"] }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.151"
 sha2 = { version = "=0.11.0", default-features = false }

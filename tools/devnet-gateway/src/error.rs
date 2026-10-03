@@ -22,6 +22,10 @@ pub enum DevnetError {
     FaucetExhausted,
     SyncBlockNotFound,
     InvalidSyncBlock,
+    InvalidQuorumConfiguration,
+    InvalidQuorumRequest,
+    ConflictingQuorumVote,
+    QuorumUnavailable,
     StateUnavailable,
     InternalInvariant,
 }
@@ -35,11 +39,16 @@ impl DevnetError {
             | Self::UnsupportedOperation
             | Self::InvalidTransaction
             | Self::InvalidCheckout
-            | Self::InvalidSyncBlock => StatusCode::BAD_REQUEST,
+            | Self::InvalidSyncBlock
+            | Self::InvalidQuorumRequest => StatusCode::BAD_REQUEST,
             Self::CheckoutNotFound | Self::SyncBlockNotFound => StatusCode::NOT_FOUND,
-            Self::AccountAlreadyFunded | Self::CheckoutConflict => StatusCode::CONFLICT,
-            Self::FaucetExhausted => StatusCode::SERVICE_UNAVAILABLE,
-            Self::StateUnavailable | Self::InternalInvariant => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::AccountAlreadyFunded | Self::CheckoutConflict | Self::ConflictingQuorumVote => {
+                StatusCode::CONFLICT
+            }
+            Self::FaucetExhausted | Self::QuorumUnavailable => StatusCode::SERVICE_UNAVAILABLE,
+            Self::StateUnavailable | Self::InternalInvariant | Self::InvalidQuorumConfiguration => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
         }
     }
 }
@@ -59,6 +68,10 @@ impl fmt::Display for DevnetError {
             Self::FaucetExhausted => "development faucet has insufficient funds",
             Self::SyncBlockNotFound => "finalized synchronization block was not found",
             Self::InvalidSyncBlock => "invalid finalized synchronization block",
+            Self::InvalidQuorumConfiguration => "invalid validator quorum configuration",
+            Self::InvalidQuorumRequest => "invalid authenticated quorum request",
+            Self::ConflictingQuorumVote => "validator refused a conflicting quorum vote",
+            Self::QuorumUnavailable => "validator quorum is unavailable",
             Self::StateUnavailable => "development state is unavailable",
             Self::InternalInvariant => "development network invariant failed",
         })

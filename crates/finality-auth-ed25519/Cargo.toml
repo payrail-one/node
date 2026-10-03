@@ -1,0 +1,20 @@
+[package]
+name = "finality-auth-ed25519"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+ed25519-dalek = { version = "=3.0.0", default-features = false }
+finality-proof-core = { path = "../finality-proof-core" }
+network-membership-core = { path = "../network-membership-core" }
+
+[dev-dependencies]
+ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["zeroize"] }
+ledger-core = { path = "../ledger-core" }
+state-sync-core = { path = "../state-sync-core" }
+
+[lints]
+workspace = true

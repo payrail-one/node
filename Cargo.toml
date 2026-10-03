@@ -2,6 +2,10 @@
 members = [
     "crates/account-address",
     "crates/authenticated-state-core",
+    "crates/consensus-signer-core",
+    "crates/consensus-signer-journal-fs",
+    "crates/finality-auth-ed25519",
+    "crates/finality-proof-core",
     "crates/ledger-core",
     "crates/ledger-runtime-core",
     "crates/merchant-checkout-core",

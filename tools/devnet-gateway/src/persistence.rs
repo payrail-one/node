@@ -1,4 +1,8 @@
-use std::{fs, path::Path};
+use std::{
+    fs::{self, File, OpenOptions},
+    io::{Read, Write},
+    path::{Path, PathBuf},
+};
 
 use ed25519_dalek::{Signer, SigningKey};
 use ledger_core::{LedgerSnapshot, NetworkId};
@@ -40,6 +44,7 @@ pub struct DevnetPersistence {
     ledger: LmdbTailStateStore,
     receipts: LmdbReceiptIndex,
     checkouts: LmdbMerchantCheckoutStore,
+    proofs: PathBuf,
 }
 
 impl DevnetPersistence {
@@ -51,6 +56,7 @@ impl DevnetPersistence {
         executor: &LedgerBlockExecutor<Ed25519Verifier>,
     ) -> Result<Self, DevnetError> {
         let root = prepare_root(root.as_ref())?;
+        let proofs = prepare_root(&root.join("proofs"))?;
         let config = verified_config(network, genesis)?;
         let ledger = LmdbTailStateStore::open_ledger(
             root.join("ledger"),
@@ -96,6 +102,7 @@ impl DevnetPersistence {
             ledger,
             receipts,
             checkouts,
+            proofs,
         };
         persistence.rebuild_receipts(executor)?;
         Ok(persistence)
@@ -113,7 +120,12 @@ impl DevnetPersistence {
         self.ledger.finalized_block(height).map_err(map_store_error)
     }
 
-    pub fn commit_ledger(&self, block: &VerifiedTailBlock) -> Result<(), DevnetError> {
+    pub fn commit_ledger(
+        &self,
+        block: &VerifiedTailBlock,
+        finality_proof: &[u8],
+    ) -> Result<(), DevnetError> {
+        self.store_proof(block.checkpoint().height, finality_proof)?;
         match self
             .ledger
             .commit_verified_ledger(block)
@@ -122,6 +134,23 @@ impl DevnetPersistence {
             CommitOutcome::Committed => Ok(()),
             CommitOutcome::ExistingSame => Err(DevnetError::InternalInvariant),
         }
+    }
+
+    pub fn finality_proof(&self, height: u64) -> Result<Vec<u8>, DevnetError> {
+        let path = self.proofs.join(format!("{height:016x}.proof"));
+        let metadata = fs::symlink_metadata(&path).map_err(|_| DevnetError::StateUnavailable)?;
+        let maximum = u64::try_from(state_sync_core::MAX_FINALITY_PROOF_BYTES)
+            .map_err(|_| DevnetError::InternalInvariant)?;
+        if !metadata.file_type().is_file() || metadata.len() == 0 || metadata.len() > maximum {
+            return Err(DevnetError::StateUnavailable);
+        }
+        let mut proof = Vec::with_capacity(
+            usize::try_from(metadata.len()).map_err(|_| DevnetError::StateUnavailable)?,
+        );
+        File::open(path)
+            .and_then(|mut file| file.read_to_end(&mut proof))
+            .map_err(|_| DevnetError::StateUnavailable)?;
+        Ok(proof)
     }
 
     pub fn commit_receipts(&self, block: &FinalizedReceiptBlock) -> Result<(), DevnetError> {
@@ -182,6 +211,40 @@ impl DevnetPersistence {
             .mark_gateway_recorded(DEVNET_TENANT, id, now_ms)
             .map(|_| ())
             .map_err(map_checkout_error)
+    }
+
+    fn store_proof(&self, height: u64, proof: &[u8]) -> Result<(), DevnetError> {
+        if proof.is_empty() || proof.len() > state_sync_core::MAX_FINALITY_PROOF_BYTES {
+            return Err(DevnetError::InternalInvariant);
+        }
+        let target = self.proofs.join(format!("{height:016x}.proof"));
+        if target.exists() {
+            return if self.finality_proof(height)? == proof {
+                Ok(())
+            } else {
+                Err(DevnetError::InternalInvariant)
+            };
+        }
+        let temporary = self
+            .proofs
+            .join(format!(".{height:016x}-{}.tmp", std::process::id()));
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temporary)
+            .map_err(|_| DevnetError::StateUnavailable)?;
+        let result = (|| {
+            file.write_all(proof)?;
+            file.sync_all()?;
+            drop(file);
+            fs::rename(&temporary, &target)?;
+            File::open(&self.proofs)?.sync_all()?;
+            Ok::<(), std::io::Error>(())
+        })();
+        if result.is_err() {
+            let _ignored = fs::remove_file(&temporary);
+        }
+        result.map_err(|_| DevnetError::StateUnavailable)
     }
 }
 

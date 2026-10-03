@@ -14,7 +14,10 @@ pub struct NetworkStatusView {
     pub network_id: String,
     pub address_prefix: String,
     pub finalized_height: String,
-    pub finality_mode: &'static str,
+    pub finality_mode: String,
+    pub validator_count: usize,
+    pub online_validators: usize,
+    pub quorum_weight: u64,
     pub asset: NetworkAssetView,
 }
 

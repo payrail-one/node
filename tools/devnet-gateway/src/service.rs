@@ -13,9 +13,7 @@ use ledger_core::{
 use ledger_runtime_core::{LedgerBlockCodec, LedgerBlockExecutor, LedgerStateCodec, state_root};
 use merchant_checkout_core::CheckoutId;
 use receipt_index_core::FinalizedReceiptBlock;
-use state_sync_core::{
-    BlockHash, FinalityProofVerifier, FinalizedCheckpoint, StateRoot, ValidatorSetHash,
-};
+use state_sync_core::{BlockHash, FinalizedCheckpoint, StateRoot};
 use tail_sync_core::{FinalizedTailBlock, TailSyncSession};
 use transaction_auth_ed25519::Ed25519Verifier;
 use transaction_protocol::{MAX_ENVELOPE_BYTES, SignedOperationCodec};
@@ -31,12 +29,13 @@ use crate::{
         SyncBlockView, SyncBootstrapView,
     },
     persistence::DevnetPersistence,
+    quorum::{FinalityPolicy, QuorumCoordinator, QuorumProposal},
     sync::{checkpoint_view, decode_block},
 };
 
 pub(crate) const NETWORK: NetworkId = NetworkId::new([17; 32]);
 pub(crate) const ASSET: AssetId = AssetId::new([34; 32]);
-const ADDRESS_PREFIX: &str = "paydev";
+pub(crate) const ADDRESS_PREFIX: &str = "paydev";
 const SYMBOL: &str = "TEST";
 const DECIMALS: u8 = 6;
 const FAUCET_GRANT: u128 = 100_000_000;
@@ -50,7 +49,6 @@ type RebuiltPresentation = (
     BTreeMap<CheckoutId, FinalizedTransactionView>,
 );
 
-#[derive(Debug)]
 pub struct DevnetService {
     address_codec: AddressCodec,
     faucet_key: SigningKey,
@@ -62,6 +60,8 @@ pub struct DevnetService {
     funded: BTreeSet<AccountId>,
     settled_checkouts: BTreeMap<CheckoutId, FinalizedTransactionView>,
     index: ExplorerIndex,
+    finality: FinalityPolicy,
+    coordinator: Option<QuorumCoordinator>,
 }
 
 impl DevnetService {
@@ -76,6 +76,26 @@ impl DevnetService {
     /// Fails if deterministic genesis, persistent recovery, derived-index
     /// rebuilding or address configuration violates an invariant.
     pub fn open(path: impl AsRef<Path>) -> Result<Self, DevnetError> {
+        Self::open_with(path, FinalityPolicy::Single, None)
+    }
+
+    /// Opens a read-only-capable replica using the configured public validator set.
+    ///
+    /// # Errors
+    ///
+    /// Fails for a non-canonical four-validator set or incompatible persisted state.
+    pub fn open_quorum_replica(
+        path: impl AsRef<Path>,
+        validator_public_keys: &str,
+    ) -> Result<Self, DevnetError> {
+        Self::open_with(path, FinalityPolicy::quorum(validator_public_keys)?, None)
+    }
+
+    pub(crate) fn open_with(
+        path: impl AsRef<Path>,
+        finality: FinalityPolicy,
+        coordinator: Option<QuorumCoordinator>,
+    ) -> Result<Self, DevnetError> {
         let faucet_key = SigningKey::from_bytes(&[51; 32]);
         let faucet_account = AccountId::new(faucet_key.verifying_key().to_bytes());
         let registry = AccountId::new([52; 32]);
@@ -109,7 +129,7 @@ impl DevnetService {
             height: 0,
             block_hash: BlockHash::new([58; 32]),
             state_root: state_root(&genesis_state),
-            validator_set_hash: ValidatorSetHash::new([57; 32]),
+            validator_set_hash: finality.validator_set_hash(),
         };
         let address_codec = AddressCodec::new(NETWORK, ADDRESS_PREFIX)
             .map_err(|_| DevnetError::InternalInvariant)?;
@@ -129,6 +149,8 @@ impl DevnetService {
             funded,
             settled_checkouts,
             index,
+            finality,
+            coordinator,
         })
     }
 
@@ -138,7 +160,13 @@ impl DevnetService {
             network_id: encode_hex(NETWORK.as_bytes()),
             address_prefix: ADDRESS_PREFIX.to_owned(),
             finalized_height: self.checkpoint.height.to_string(),
-            finality_mode: "single-node-devnet",
+            finality_mode: self.finality.mode().to_owned(),
+            validator_count: self.finality.validator_count(),
+            online_validators: self.coordinator.as_ref().map_or_else(
+                || self.finality.validator_count().min(1),
+                |coordinator| coordinator.online_validators(self.checkpoint.height),
+            ),
+            quorum_weight: self.finality.quorum_weight(),
             asset: NetworkAssetView {
                 id: encode_hex(ASSET.as_bytes()),
                 symbol: SYMBOL.to_owned(),
@@ -321,7 +349,7 @@ impl DevnetService {
         let genesis = self.persistence.recovery_base()?.checkpoint;
         Ok(SyncBootstrapView {
             network_id: encode_hex(NETWORK.as_bytes()),
-            finality_mode: "single-node-devnet".to_owned(),
+            finality_mode: self.finality.mode().to_owned(),
             genesis: checkpoint_view(genesis),
             finalized_height: self.checkpoint.height.to_string(),
         })
@@ -343,7 +371,7 @@ impl DevnetService {
             parent: checkpoint_view(stored.previous),
             checkpoint: checkpoint_view(stored.checkpoint),
             payload: encode_hex(&stored.payload),
-            finality_proof: encode_hex(DEVNET_FINALITY_PROOF),
+            finality_proof: encode_hex(&self.persistence.finality_proof(height)?),
         })
     }
 
@@ -368,6 +396,36 @@ impl DevnetService {
         self.checkpoint.height
     }
 
+    pub(crate) fn validate_quorum_proposal(
+        &self,
+        proposal: &QuorumProposal,
+    ) -> Result<FinalizedCheckpoint, DevnetError> {
+        let (parent, proposed) = proposal.checkpoints()?;
+        if parent != self.checkpoint
+            || proposed.validator_set_hash != self.finality.validator_set_hash()
+        {
+            return Err(DevnetError::InvalidQuorumRequest);
+        }
+        let payload = proposal.payload_bytes()?;
+        let executed = self
+            .executor
+            .execute(parent, &self.state, &payload)
+            .map_err(|_| DevnetError::InvalidQuorumRequest)?;
+        let expected = FinalizedCheckpoint {
+            height: parent
+                .height
+                .checked_add(1)
+                .ok_or(DevnetError::InternalInvariant)?,
+            block_hash: executed.transition.commitment.block_hash,
+            state_root: executed.transition.commitment.state_root,
+            validator_set_hash: self.finality.validator_set_hash(),
+        };
+        if proposed != expected {
+            return Err(DevnetError::InvalidQuorumRequest);
+        }
+        Ok(proposed)
+    }
+
     fn finalize(&mut self, signed: &SignedOperation) -> Result<SubmissionResultView, DevnetError> {
         if !matches!(signed.operation, AuthorizedOperation::Transfer(_)) {
             return Err(DevnetError::UnsupportedOperation);
@@ -378,6 +436,7 @@ impl DevnetService {
             .executor
             .execute(self.checkpoint, &self.state, &payload)
             .map_err(|_| DevnetError::InvalidTransaction)?;
+        let parent = self.checkpoint;
         let checkpoint = FinalizedCheckpoint {
             height: self
                 .checkpoint
@@ -388,14 +447,31 @@ impl DevnetService {
             state_root: executed.transition.commitment.state_root,
             validator_set_hash: self.checkpoint.validator_set_hash,
         };
+        let finality_proof = match self.coordinator.as_mut() {
+            Some(coordinator) => coordinator.certify(parent, checkpoint, &payload)?,
+            None if matches!(self.finality, FinalityPolicy::Single) => {
+                DEVNET_FINALITY_PROOF.to_vec()
+            }
+            None => return Err(DevnetError::QuorumUnavailable),
+        };
         let finalized = FinalizedTailBlock {
             network: NETWORK,
-            parent_hash: self.checkpoint.block_hash,
+            parent_hash: parent.block_hash,
             checkpoint,
             payload: payload.clone(),
-            finality_proof: DEVNET_FINALITY_PROOF.to_vec(),
+            finality_proof: finality_proof.clone(),
         };
-        self.commit_finalized(finalized)
+        let result = self.commit_finalized(finalized)?;
+        if let Some(coordinator) = &self.coordinator {
+            coordinator.publish(&SyncBlockView {
+                network_id: encode_hex(NETWORK.as_bytes()),
+                parent: checkpoint_view(parent),
+                checkpoint: checkpoint_view(checkpoint),
+                payload: encode_hex(&payload),
+                finality_proof: encode_hex(&finality_proof),
+            });
+        }
+        Ok(result)
     }
 
     fn commit_finalized(
@@ -403,8 +479,9 @@ impl DevnetService {
         finalized: FinalizedTailBlock,
     ) -> Result<SubmissionResultView, DevnetError> {
         let previous = self.checkpoint;
+        let proof = finalized.finality_proof.clone();
         let (verified, executed) = TailSyncSession::new(NETWORK, previous)
-            .verify_next_with(finalized, &DevnetFinality, |checkpoint, payload| {
+            .verify_next_with(finalized, &self.finality, |checkpoint, payload| {
                 self.executor
                     .execute(checkpoint, &self.state, payload)
                     .ok()
@@ -434,7 +511,7 @@ impl DevnetService {
             checkpoint,
             receipts: executed.receipts,
         };
-        self.persistence.commit_ledger(&verified)?;
+        self.persistence.commit_ledger(&verified, &proof)?;
         self.state = verified.state().to_vec();
         self.checkpoint = checkpoint;
         if self.persistence.commit_receipts(&receipt_block).is_err() {
@@ -481,17 +558,6 @@ impl DevnetService {
             self.settled_checkouts.insert(id, transaction);
         }
         Ok(())
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-struct DevnetFinality;
-
-impl FinalityProofVerifier for DevnetFinality {
-    fn verify(&self, network: NetworkId, checkpoint: FinalizedCheckpoint, proof: &[u8]) -> bool {
-        network == NETWORK
-            && checkpoint.validator_set_hash == ValidatorSetHash::new([57; 32])
-            && proof == DEVNET_FINALITY_PROOF
     }
 }
 

@@ -9,6 +9,7 @@ pub struct NodeConfig {
     pub data_directory: PathBuf,
     pub upstreams: Vec<Url>,
     pub sync_interval: Duration,
+    pub validator_public_keys: String,
 }
 
 impl NodeConfig {
@@ -36,17 +37,31 @@ impl NodeConfig {
                 "PAYRAIL_NODE_SYNC_INTERVAL_SECONDS must be between 1 and 300",
             ));
         }
+        let validator_public_keys = required_environment("PAYRAIL_NODE_VALIDATOR_PUBLIC_KEYS")?;
         Ok(Self {
             bind,
             data_directory,
             upstreams,
             sync_interval: Duration::from_secs(seconds),
+            validator_public_keys,
         })
     }
 }
 
 fn environment(name: &str, default: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| default.to_owned())
+}
+
+fn required_environment(name: &'static str) -> Result<String, NodeError> {
+    std::env::var(name)
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .ok_or(NodeError::Configuration(match name {
+            "PAYRAIL_NODE_VALIDATOR_PUBLIC_KEYS" => {
+                "PAYRAIL_NODE_VALIDATOR_PUBLIC_KEYS is required"
+            }
+            _ => "required environment variable is missing",
+        }))
 }
 
 fn parse_upstreams(value: &str) -> Result<Vec<Url>, NodeError> {

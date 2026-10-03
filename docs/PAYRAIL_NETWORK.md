@@ -22,8 +22,10 @@ maintained finalized-receipt index. Test assets have no monetary value.
 Private keys remain in the browser and are encrypted with AES-256-GCM using a
 PBKDF2-derived key. Browser views are presentation clients; balances, nonces,
 execution outcomes and finality come from the ledger and its independent index.
-The current public topology is explicitly labelled single-node devnet and must
-not be represented as production BFT finality.
+The public devnet uses four independently persisted validators and strict
+three-of-four Ed25519 finality. Each voter independently executes the proposal
+before signing, and replicas reverify certificates before applying state. This
+is a fixed-coordinator development quorum, not permissionless production BFT.
 
 ## Engineering
 

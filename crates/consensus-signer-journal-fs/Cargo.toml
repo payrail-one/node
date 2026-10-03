@@ -1,0 +1,16 @@
+[package]
+name = "consensus-signer-journal-fs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+consensus-signer-core = { path = "../consensus-signer-core" }
+ledger-core = { path = "../ledger-core" }
+sha2 = { version = "=0.11.0", default-features = false }
+state-sync-core = { path = "../state-sync-core" }
+
+[lints]
+workspace = true

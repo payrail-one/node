@@ -14,6 +14,7 @@ services:
       - node-state:/var/lib/payrail
     environment:
       PAYRAIL_NODE_UPSTREAMS: ${PAYRAIL_NODE_UPSTREAMS:-https://devnet.payrail.one}
+      PAYRAIL_NODE_VALIDATOR_PUBLIC_KEYS: ${PAYRAIL_NODE_VALIDATOR_PUBLIC_KEYS:?set the canonical four-key Payrail devnet validator set}
       PAYRAIL_NODE_DATA_DIR: /var/lib/payrail/node
     tmpfs:
       - /tmp:size=64m,mode=1777

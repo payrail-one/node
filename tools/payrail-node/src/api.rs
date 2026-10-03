@@ -33,7 +33,7 @@ pub async fn status(
     Ok(Json(PublicNodeStatusView {
         role: "public-replica",
         network_id: network.network_id,
-        finality_mode: network.finality_mode.to_owned(),
+        finality_mode: network.finality_mode.clone(),
         local_finalized_height: network.finalized_height,
         upstream_finalized_height: health.target_height.map(|height| height.to_string()),
         synchronized: health.synchronized,

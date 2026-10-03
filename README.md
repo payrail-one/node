@@ -5,10 +5,10 @@ Anyone can run it. The node follows configured Payrail upstreams, independently
 re-executes every sequential finalized block and stores its own durable LMDB
 ledger and receipt index.
 
-> **Development network only.** The current upstream uses single-node
-> development finality and test assets with no monetary value. This node checks
-> deterministic state transitions and fork continuity, but it is not yet a
-> validator or a claim of multi-validator BFT finality.
+> **Development network only.** The current upstream uses four equal-weight
+> validators and strict three-of-four Ed25519 finality. This node verifies every
+> certificate and re-executes every finalized transition independently. It is a
+> non-voting replica, not a claim of permissionless production BFT finality.
 
 ## Run a public node
 
@@ -26,6 +26,11 @@ The API is bound to loopback by default. The node follows
 `https://devnet.payrail.one` and retains verified ledger data in the
 `node-state` Docker volume across restarts. Configure several comma-separated
 origins with `PAYRAIL_NODE_UPSTREAMS` for failover.
+
+Set `PAYRAIL_NODE_VALIDATOR_PUBLIC_KEYS` to the canonical comma-separated
+four-key devnet validator set published in
+`config/devnet-validator-public-keys.txt`. The node fails closed if the set is
+absent, malformed or does not match the upstream genesis and certificates.
 
 A hosted demonstration of the same public-replica build is available at
 [public-node.payrail.one](https://public-node.payrail.one).

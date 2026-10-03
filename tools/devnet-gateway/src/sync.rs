@@ -41,7 +41,9 @@ pub(crate) fn decode_block(view: &SyncBlockView) -> Result<FinalizedTailBlock, D
     })
 }
 
-fn decode_checkpoint(view: &SyncCheckpointView) -> Result<FinalizedCheckpoint, DevnetError> {
+pub(crate) fn decode_checkpoint(
+    view: &SyncCheckpointView,
+) -> Result<FinalizedCheckpoint, DevnetError> {
     Ok(FinalizedCheckpoint {
         height: view
             .height
