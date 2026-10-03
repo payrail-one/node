@@ -1,0 +1,19 @@
+[Unit]
+Description=Payrail public replica node
+After=docker.service network-online.target payrail-testnet-gateway.service
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+SuccessExitStatus=137 143
+Restart=on-failure
+RestartSec=3
+ExecStartPre=-/usr/bin/docker rm -f payrail-public-node
+ExecStart=/usr/bin/docker run --name payrail-public-node --network host --read-only --cap-drop ALL --security-opt no-new-privileges:true --volume /var/lib/payrail-public-node:/var/lib/payrail --env-file /etc/payrail/public-node.env payrail/node:candidate
+ExecStop=/usr/bin/docker stop --timeout 25 payrail-public-node
+TimeoutStartSec=60
+TimeoutStopSec=35
+
+[Install]
+WantedBy=multi-user.target
