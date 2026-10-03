@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex};
 
 use devnet_gateway::{
-    AccountStateView, DevnetError, DevnetService, ExplorerOverviewView, NetworkStatusView,
-    SubmitRequest,
+    AccountStateView, ContractView, DevnetError, DevnetService, ExplorerOverviewView,
+    NetworkStatusView, SubmitRequest,
 };
 use tokio::sync::Mutex as AsyncMutex;
 
@@ -86,6 +86,24 @@ impl NodeState {
                 DevnetError::InvalidAddress => {
                     NodeError::InvalidRequest("invalid Payrail development-network address")
                 }
+                _ => NodeError::LocalState,
+            })
+    }
+
+    /// Reads one contract from locally verified finalized state.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a malformed identifier, an unknown contract or
+    /// unavailable local state.
+    pub fn contract(&self, id: &str) -> Result<ContractView, NodeError> {
+        self.service
+            .lock()
+            .map_err(|_| NodeError::LocalState)?
+            .contract(id)
+            .map_err(|error| match error {
+                DevnetError::InvalidHex => NodeError::InvalidRequest("invalid contract id"),
+                DevnetError::ContractNotFound => NodeError::ContractNotFound,
                 _ => NodeError::LocalState,
             })
     }

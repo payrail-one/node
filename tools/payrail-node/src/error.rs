@@ -11,6 +11,7 @@ use serde::Serialize;
 pub enum NodeError {
     Configuration(&'static str),
     InvalidRequest(&'static str),
+    ContractNotFound,
     LocalState,
     UpstreamUnavailable,
     UpstreamRejected(StatusCode, serde_json::Value),
@@ -22,6 +23,7 @@ impl fmt::Display for NodeError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(match self {
             Self::Configuration(message) | Self::InvalidRequest(message) => message,
+            Self::ContractNotFound => "contract was not found",
             Self::LocalState => "local finalized state is unavailable",
             Self::UpstreamUnavailable => "all configured upstreams are unavailable",
             Self::UpstreamRejected(_, _) => "upstream rejected the signed transaction",
@@ -45,6 +47,7 @@ impl IntoResponse for NodeError {
         }
         let status = match self {
             Self::InvalidRequest(_) => StatusCode::BAD_REQUEST,
+            Self::ContractNotFound => StatusCode::NOT_FOUND,
             Self::NotSynchronized => StatusCode::SERVICE_UNAVAILABLE,
             Self::LocalState => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Configuration(_)

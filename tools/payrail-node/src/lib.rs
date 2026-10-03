@@ -25,6 +25,7 @@ pub fn router(state: NodeState) -> Router {
         .route("/health/ready", get(api::ready))
         .route("/api/status", get(api::status))
         .route("/api/accounts/{address}", get(api::account))
+        .route("/api/contracts/{id}", get(api::contract))
         .route("/api/transactions", post(api::submit))
         .route("/api/explorer", get(api::explorer))
         .layer(DefaultBodyLimit::max(1024 * 1024))

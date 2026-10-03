@@ -3,7 +3,7 @@
 Payrail Node is a self-hosted public replica of the Payrail development network.
 Anyone can run it. The node follows configured Payrail upstreams, independently
 re-executes every sequential finalized block and stores its own durable LMDB
-ledger and receipt index.
+ledger, contract state and receipt index.
 
 > **Development network only.** The current upstream uses four equal-weight
 > validators and strict three-of-four Ed25519 finality. This node verifies every
@@ -51,10 +51,12 @@ deleting the state volume.
 | `GET` | `/health/live` | Process liveness |
 | `GET` | `/health/ready` | Successful upstream synchronization |
 | `GET` | `/api/accounts/{address}` | Finalized balance and nonce |
+| `GET` | `/api/contracts/{id}` | Finalized contract code, balance and canonical state |
 | `POST` | `/api/transactions` | Submit a canonical signed envelope |
 | `GET` | `/api/explorer` | Finalized blocks and transaction summaries |
 
-Reads come from the locally synchronized database. Signed transaction envelopes
+Reads, including contract state, come from the locally synchronized database.
+Signed transaction envelopes
 are relayed to the primary upstream and later appear locally through the same
 verified synchronization path. The public-node API deliberately excludes faucet
 and checkout-administration routes.

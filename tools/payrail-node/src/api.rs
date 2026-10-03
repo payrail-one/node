@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
-use devnet_gateway::{AccountStateView, ExplorerOverviewView, SubmitRequest};
+use devnet_gateway::{AccountStateView, ContractView, ExplorerOverviewView, SubmitRequest};
 use serde::Serialize;
 
 use crate::{error::NodeError, state::NodeState};
@@ -47,6 +47,13 @@ pub async fn account(
     Path(address): Path<String>,
 ) -> Result<Json<AccountStateView>, NodeError> {
     state.account(&address).map(Json)
+}
+
+pub async fn contract(
+    State(state): State<NodeState>,
+    Path(id): Path<String>,
+) -> Result<Json<ContractView>, NodeError> {
+    state.contract(&id).map(Json)
 }
 
 pub async fn explorer(
