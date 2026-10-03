@@ -1,0 +1,24 @@
+[package]
+name = "checkout-approval-lmdb"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+checkout-approval-core = { path = "../checkout-approval-core" }
+heed = { version = "=0.22.1", default-features = false }
+ledger-core = { path = "../ledger-core" }
+merchant-checkout-core = { path = "../merchant-checkout-core" }
+sha2 = { version = "=0.11.0", default-features = false }
+
+[dev-dependencies]
+checkout-approval-auth-hmac = { path = "../checkout-approval-auth-hmac" }
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = "deny"
+pedantic = "deny"

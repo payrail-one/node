@@ -18,6 +18,12 @@ pub enum DevnetError {
     InvalidCheckout,
     CheckoutNotFound,
     CheckoutConflict,
+    ApprovalInvalid,
+    ApprovalNotFound,
+    ApprovalUnauthorized,
+    ApprovalRateLimited,
+    ApprovalConflict,
+    ApprovalUnavailable,
     AccountAlreadyFunded,
     FaucetExhausted,
     SyncBlockNotFound,
@@ -40,12 +46,20 @@ impl DevnetError {
             | Self::InvalidTransaction
             | Self::InvalidCheckout
             | Self::InvalidSyncBlock
-            | Self::InvalidQuorumRequest => StatusCode::BAD_REQUEST,
-            Self::CheckoutNotFound | Self::SyncBlockNotFound => StatusCode::NOT_FOUND,
-            Self::AccountAlreadyFunded | Self::CheckoutConflict | Self::ConflictingQuorumVote => {
-                StatusCode::CONFLICT
+            | Self::InvalidQuorumRequest
+            | Self::ApprovalInvalid => StatusCode::BAD_REQUEST,
+            Self::CheckoutNotFound | Self::SyncBlockNotFound | Self::ApprovalNotFound => {
+                StatusCode::NOT_FOUND
             }
-            Self::FaucetExhausted | Self::QuorumUnavailable => StatusCode::SERVICE_UNAVAILABLE,
+            Self::ApprovalUnauthorized => StatusCode::UNAUTHORIZED,
+            Self::ApprovalRateLimited => StatusCode::TOO_MANY_REQUESTS,
+            Self::AccountAlreadyFunded
+            | Self::CheckoutConflict
+            | Self::ConflictingQuorumVote
+            | Self::ApprovalConflict => StatusCode::CONFLICT,
+            Self::FaucetExhausted | Self::QuorumUnavailable | Self::ApprovalUnavailable => {
+                StatusCode::SERVICE_UNAVAILABLE
+            }
             Self::StateUnavailable | Self::InternalInvariant | Self::InvalidQuorumConfiguration => {
                 StatusCode::INTERNAL_SERVER_ERROR
             }
@@ -64,6 +78,12 @@ impl fmt::Display for DevnetError {
             Self::InvalidCheckout => "invalid or expired development checkout",
             Self::CheckoutNotFound => "development checkout was not found",
             Self::CheckoutConflict => "development checkout is already claimed or conflicts",
+            Self::ApprovalInvalid => "invalid or expired Payrail Code request",
+            Self::ApprovalNotFound => "Payrail Code session was not found",
+            Self::ApprovalUnauthorized => "Payrail Code authentication failed",
+            Self::ApprovalRateLimited => "Payrail Code request rate limit exceeded",
+            Self::ApprovalConflict => "Payrail Code is already linked or conflicts",
+            Self::ApprovalUnavailable => "Payrail Code is unavailable on this deployment",
             Self::AccountAlreadyFunded => "this development account already used the faucet",
             Self::FaucetExhausted => "development faucet has insufficient funds",
             Self::SyncBlockNotFound => "finalized synchronization block was not found",

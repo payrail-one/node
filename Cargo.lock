@@ -40,7 +40,7 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "jmt",
- "sha2",
+ "sha2 0.11.0",
 ]
 
 [[package]]
@@ -254,6 +254,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "checkout-approval-auth-hmac"
+version = "0.0.0"
+dependencies = [
+ "checkout-approval-core",
+ "hmac",
+ "ledger-core",
+ "sha2 0.10.9",
+]
+
+[[package]]
+name = "checkout-approval-core"
+version = "0.0.0"
+dependencies = [
+ "ledger-core",
+ "merchant-checkout-core",
+]
+
+[[package]]
+name = "checkout-approval-lmdb"
+version = "0.0.0"
+dependencies = [
+ "checkout-approval-auth-hmac",
+ "checkout-approval-core",
+ "heed",
+ "ledger-core",
+ "merchant-checkout-core",
+ "sha2 0.11.0",
+]
+
+[[package]]
+name = "checkout-approval-random"
+version = "0.0.0"
+dependencies = [
+ "checkout-approval-core",
+ "getrandom 0.4.3",
+]
+
+[[package]]
 name = "cmake"
 version = "0.1.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -287,7 +325,7 @@ version = "0.0.0"
 dependencies = [
  "consensus-signer-core",
  "ledger-core",
- "sha2",
+ "sha2 0.11.0",
  "state-sync-core",
 ]
 
@@ -416,11 +454,16 @@ version = "0.0.0"
 dependencies = [
  "account-address",
  "axum",
+ "checkout-approval-auth-hmac",
+ "checkout-approval-core",
+ "checkout-approval-lmdb",
+ "checkout-approval-random",
  "consensus-signer-core",
  "consensus-signer-journal-fs",
  "ed25519-dalek",
  "finality-auth-ed25519",
  "finality-proof-core",
+ "hmac",
  "ledger-core",
  "ledger-runtime-core",
  "merchant-checkout-core",
@@ -429,13 +472,16 @@ dependencies = [
  "network-config-core",
  "network-membership-core",
  "payment-idempotency-core",
+ "payment-ingress-core",
+ "payment-rate-limit-lmdb",
  "receipt-index-core",
  "receipt-index-lmdb",
  "receipt-rebuild-core",
  "reqwest",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.10.9",
+ "sha2 0.11.0",
  "state-sync-core",
  "tail-state-store-lmdb",
  "tail-sync-core",
@@ -452,6 +498,7 @@ checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
 dependencies = [
  "block-buffer 0.10.4",
  "crypto-common 0.1.7",
+ "subtle",
 ]
 
 [[package]]
@@ -511,7 +558,7 @@ dependencies = [
  "keccak",
  "rand_core 0.10.1",
  "serde",
- "sha2",
+ "sha2 0.11.0",
  "signature",
  "strobe-rs",
  "subtle",
@@ -563,7 +610,7 @@ version = "0.0.0"
 dependencies = [
  "ledger-core",
  "network-membership-core",
- "sha2",
+ "sha2 0.11.0",
  "state-sync-core",
 ]
 
@@ -740,6 +787,15 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "hmac"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
+dependencies = [
+ "digest 0.10.7",
+]
 
 [[package]]
 name = "http"
@@ -1088,7 +1144,7 @@ dependencies = [
 name = "ledger-core"
 version = "0.0.0"
 dependencies = [
- "sha2",
+ "sha2 0.11.0",
 ]
 
 [[package]]
@@ -1098,7 +1154,7 @@ dependencies = [
  "authenticated-state-core",
  "ed25519-dalek",
  "ledger-core",
- "sha2",
+ "sha2 0.11.0",
  "state-sync-core",
  "tail-sync-core",
  "transaction-auth-ed25519",
@@ -1160,7 +1216,7 @@ dependencies = [
  "ledger-core",
  "payment-gateway-core",
  "payment-idempotency-core",
- "sha2",
+ "sha2 0.11.0",
 ]
 
 [[package]]
@@ -1173,7 +1229,7 @@ dependencies = [
  "payment-gateway-core",
  "payment-idempotency-core",
  "payment-idempotency-lmdb",
- "sha2",
+ "sha2 0.11.0",
  "state-sync-core",
 ]
 
@@ -1218,7 +1274,7 @@ dependencies = [
  "ledger-core",
  "ledger-runtime-core",
  "network-membership-core",
- "sha2",
+ "sha2 0.11.0",
  "state-sync-core",
 ]
 
@@ -1227,7 +1283,7 @@ name = "network-membership-core"
 version = "0.0.0"
 dependencies = [
  "ledger-core",
- "sha2",
+ "sha2 0.11.0",
 ]
 
 [[package]]
@@ -1279,7 +1335,7 @@ dependencies = [
  "ledger-core",
  "payment-idempotency-core",
  "payment-idempotency-lmdb",
- "sha2",
+ "sha2 0.11.0",
  "transaction-protocol",
 ]
 
@@ -1303,9 +1359,29 @@ dependencies = [
  "payment-reconciliation-work-core",
  "receipt-index-core",
  "receipt-index-lmdb",
- "sha2",
+ "sha2 0.11.0",
  "state-sync-core",
  "transaction-protocol",
+]
+
+[[package]]
+name = "payment-ingress-core"
+version = "0.0.0"
+dependencies = [
+ "ledger-core",
+ "payment-gateway-core",
+ "payment-idempotency-core",
+ "payment-idempotency-lmdb",
+]
+
+[[package]]
+name = "payment-rate-limit-lmdb"
+version = "0.0.0"
+dependencies = [
+ "heed",
+ "ledger-core",
+ "payment-idempotency-core",
+ "payment-ingress-core",
 ]
 
 [[package]]
@@ -1625,7 +1701,7 @@ dependencies = [
  "ledger-core",
  "ledger-runtime-core",
  "receipt-index-core",
- "sha2",
+ "sha2 0.11.0",
  "state-sync-core",
 ]
 
@@ -1928,6 +2004,17 @@ dependencies = [
 
 [[package]]
 name = "sha2"
+version = "0.10.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
+dependencies = [
+ "cfg-if",
+ "cpufeatures 0.2.17",
+ "digest 0.10.7",
+]
+
+[[package]]
+name = "sha2"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "446ba717509524cb3f22f17ecc096f10f4822d76ab5c0b9822c5f9c284e825f4"
@@ -2012,7 +2099,7 @@ version = "0.0.0"
 dependencies = [
  "ledger-core",
  "network-membership-core",
- "sha2",
+ "sha2 0.11.0",
 ]
 
 [[package]]
@@ -2111,7 +2198,7 @@ dependencies = [
  "network-config-auth-ed25519",
  "network-config-core",
  "receipt-index-core",
- "sha2",
+ "sha2 0.11.0",
  "state-sync-core",
  "tail-sync-core",
  "transaction-auth-ed25519",
@@ -2122,7 +2209,7 @@ name = "tail-sync-core"
 version = "0.0.0"
 dependencies = [
  "ledger-core",
- "sha2",
+ "sha2 0.11.0",
  "state-sync-core",
 ]
 

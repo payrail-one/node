@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod api;
+mod approval;
 mod checkout;
 mod codec;
 mod error;
@@ -13,6 +14,9 @@ mod replica;
 mod service;
 mod sync;
 
+#[cfg(test)]
+mod approval_tests;
+
 use std::sync::{Arc, Mutex};
 
 use axum::{
@@ -22,6 +26,7 @@ use axum::{
 use tokio::sync::broadcast;
 
 use crate::{
+    approval::ApprovalRail,
     model::LiveEvent,
     quorum::{QuorumCoordinator, QuorumSetup, QuorumSigner},
 };
@@ -63,6 +68,7 @@ pub async fn run_replica_sync(state: AppState, upstream: String) -> Result<(), D
 #[derive(Clone)]
 pub struct AppState {
     pub(crate) service: Arc<Mutex<DevnetService>>,
+    approval: Option<Arc<Mutex<ApprovalRail>>>,
     events: broadcast::Sender<LiveEvent>,
     quorum_signer: Arc<Mutex<Option<QuorumSigner>>>,
     coordinator_public_key: Option<ed25519_dalek::VerifyingKey>,
@@ -77,8 +83,10 @@ impl AppState {
     /// recovery or derived-index reconstruction fails.
     pub fn open(path: impl AsRef<std::path::Path>) -> Result<Self, DevnetError> {
         let (events, _) = broadcast::channel(256);
+        let path = path.as_ref();
         Ok(Self {
             service: Arc::new(Mutex::new(DevnetService::open(path)?)),
+            approval: ApprovalRail::from_environment(path)?.map(|rail| Arc::new(Mutex::new(rail))),
             events,
             quorum_signer: Arc::new(Mutex::new(None)),
             coordinator_public_key: None,
@@ -105,6 +113,8 @@ impl AppState {
         if endpoints.is_empty() {
             return Ok(Self {
                 service: Arc::new(Mutex::new(DevnetService::open_with(path, policy, None)?)),
+                approval: ApprovalRail::from_environment(path)?
+                    .map(|rail| Arc::new(Mutex::new(rail))),
                 events,
                 quorum_signer: Arc::new(Mutex::new(Some(signer))),
                 coordinator_public_key: Some(coordinator_public_key),
@@ -117,6 +127,7 @@ impl AppState {
                 policy,
                 Some(coordinator),
             )?)),
+            approval: ApprovalRail::from_environment(path)?.map(|rail| Arc::new(Mutex::new(rail))),
             events,
             quorum_signer: Arc::new(Mutex::new(None)),
             coordinator_public_key: Some(coordinator_public_key),
@@ -142,7 +153,16 @@ pub fn router(state: AppState) -> Router {
         .route("/internal/quorum/prepare", post(api::quorum_prepare))
         .route("/internal/quorum/commit", post(api::quorum_commit))
         .route("/api/checkouts", post(api::create_checkout))
+        .route("/api/approval-codes", post(api::issue_approval_code))
+        .route(
+            "/api/approval-codes/sessions/{token}",
+            get(api::approval_code_challenge),
+        )
         .route("/api/checkouts/{id}", get(api::checkout))
+        .route(
+            "/api/checkouts/{id}/approval-code",
+            post(api::claim_approval_code),
+        )
         .route(
             "/api/checkouts/{id}/transactions",
             post(api::submit_checkout),

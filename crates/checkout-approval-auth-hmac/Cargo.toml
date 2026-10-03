@@ -1,0 +1,16 @@
+[package]
+name = "checkout-approval-auth-hmac"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+checkout-approval-core = { path = "../checkout-approval-core" }
+hmac = { version = "=0.12.1", default-features = false }
+ledger-core = { path = "../ledger-core" }
+sha2 = { version = "=0.10.9", default-features = false }
+
+[lints]
+workspace = true

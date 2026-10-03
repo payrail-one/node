@@ -195,6 +195,13 @@ impl DevnetService {
         })
     }
 
+    pub(crate) fn decode_account(&self, address: &str) -> Result<AccountId, DevnetError> {
+        self.address_codec
+            .decode(address)
+            .map(|decoded| decoded.account)
+            .map_err(|_| DevnetError::InvalidAddress)
+    }
+
     /// Signs and finalizes one bounded test-asset transfer from the faucet.
     ///
     /// # Errors
@@ -313,10 +320,22 @@ impl DevnetService {
         id: &str,
         envelope: &str,
     ) -> Result<CheckoutView, DevnetError> {
+        self.submit_checkout_bound(id, envelope, None)
+    }
+
+    pub(crate) fn submit_checkout_bound(
+        &mut self,
+        id: &str,
+        envelope: &str,
+        expected_payer: Option<AccountId>,
+    ) -> Result<CheckoutView, DevnetError> {
         let id = parse_id(id)?;
         let checkout = self.persistence.checkout(id)?;
         let signed = decode_signed(envelope)?;
         let payer = validate_payment(&checkout, &signed)?;
+        if expected_payer.is_some_and(|expected| expected != payer) {
+            return Err(DevnetError::CheckoutConflict);
+        }
         let submitted_at = now_ms()?;
         self.persistence
             .claim_checkout(id, payer, 0, submitted_at)?;

@@ -1,0 +1,14 @@
+[package]
+name = "checkout-approval-random"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+checkout-approval-core = { path = "../checkout-approval-core" }
+getrandom = "=0.4.3"
+
+[lints]
+workspace = true

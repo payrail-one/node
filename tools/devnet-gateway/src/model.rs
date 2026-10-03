@@ -158,6 +158,43 @@ pub struct CreateCheckoutRequest {
     pub order_reference: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueApprovalCodeRequest {
+    pub account_address: String,
+    pub device_id: String,
+    pub issued_at_ms: String,
+    pub nonce: String,
+    pub signature: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssuedApprovalCodeView {
+    pub code: String,
+    pub session_token: String,
+    pub expires_at_ms: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ClaimApprovalCodeRequest {
+    pub code: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApprovalCodeClaimView {
+    pub status: &'static str,
+    pub checkout_id: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApprovalCodeChallengeView {
+    pub status: &'static str,
+    pub checkout: Option<CheckoutView>,
+}
+
 #[derive(Serialize)]
 pub struct ErrorView {
     pub error: String,

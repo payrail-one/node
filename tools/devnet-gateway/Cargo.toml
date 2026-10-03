@@ -9,11 +9,16 @@ publish = false
 [dependencies]
 account-address = { path = "../../crates/account-address" }
 axum = { version = "=0.8.9", default-features = false, features = ["http1", "json", "query", "tokio", "ws"] }
+checkout-approval-auth-hmac = { path = "../../crates/checkout-approval-auth-hmac" }
+checkout-approval-core = { path = "../../crates/checkout-approval-core" }
+checkout-approval-lmdb = { path = "../../crates/checkout-approval-lmdb" }
+checkout-approval-random = { path = "../../crates/checkout-approval-random" }
 consensus-signer-core = { path = "../../crates/consensus-signer-core" }
 consensus-signer-journal-fs = { path = "../../crates/consensus-signer-journal-fs" }
 ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["zeroize"] }
 finality-auth-ed25519 = { path = "../../crates/finality-auth-ed25519" }
 finality-proof-core = { path = "../../crates/finality-proof-core" }
+hmac = { version = "=0.12.1", default-features = false }
 ledger-core = { path = "../../crates/ledger-core" }
 ledger-runtime-core = { path = "../../crates/ledger-runtime-core" }
 merchant-checkout-core = { path = "../../crates/merchant-checkout-core" }
@@ -22,6 +27,8 @@ network-config-auth-ed25519 = { path = "../../crates/network-config-auth-ed25519
 network-config-core = { path = "../../crates/network-config-core" }
 network-membership-core = { path = "../../crates/network-membership-core" }
 payment-idempotency-core = { path = "../../crates/payment-idempotency-core" }
+payment-ingress-core = { path = "../../crates/payment-ingress-core" }
+payment-rate-limit-lmdb = { path = "../../crates/payment-rate-limit-lmdb" }
 receipt-index-core = { path = "../../crates/receipt-index-core" }
 receipt-index-lmdb = { path = "../../crates/receipt-index-lmdb" }
 receipt-rebuild-core = { path = "../../crates/receipt-rebuild-core" }
@@ -29,6 +36,7 @@ reqwest = { version = "=0.13.2", default-features = false, features = ["blocking
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.151"
 sha2 = { version = "=0.11.0", default-features = false }
+sha2-legacy = { package = "sha2", version = "=0.10.9", default-features = false }
 state-sync-core = { path = "../../crates/state-sync-core" }
 tail-state-store-lmdb = { path = "../../crates/tail-state-store-lmdb" }
 tail-sync-core = { path = "../../crates/tail-sync-core" }

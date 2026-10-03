@@ -1,0 +1,18 @@
+[package]
+name = "payment-ingress-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+ledger-core = { path = "../ledger-core" }
+payment-gateway-core = { path = "../payment-gateway-core" }
+payment-idempotency-core = { path = "../payment-idempotency-core" }
+
+[dev-dependencies]
+payment-idempotency-lmdb = { path = "../payment-idempotency-lmdb" }
+
+[lints]
+workspace = true

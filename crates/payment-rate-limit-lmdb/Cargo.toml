@@ -1,0 +1,20 @@
+[package]
+name = "payment-rate-limit-lmdb"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+heed = { version = "=0.22.1", default-features = false }
+ledger-core = { path = "../ledger-core" }
+payment-idempotency-core = { path = "../payment-idempotency-core" }
+payment-ingress-core = { path = "../payment-ingress-core" }
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = "deny"
+pedantic = "deny"
