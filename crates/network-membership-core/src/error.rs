@@ -1,0 +1,22 @@
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MembershipError {
+    Unauthorized,
+    InvalidCapabilities,
+    InvalidConsensusKey,
+    NodeAlreadyRegistered,
+    TransportKeyAlreadyRegistered,
+    CertificateAlreadyRegistered,
+    ConsensusKeyAlreadyRegistered,
+    NodeNotFound,
+    InvalidRevocationHeight,
+    AlreadyRevoked,
+    EpochOverflow,
+    WrongNetwork,
+    StaleMembershipEpoch,
+    UnsupportedProtocol,
+    ChallengeMismatch,
+    NotYetActive,
+    Revoked,
+    RoleNotAllowed,
+    InvalidProof,
+}

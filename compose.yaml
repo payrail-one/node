@@ -1,0 +1,24 @@
+name: payrail-node
+
+services:
+  node:
+    build:
+      context: .
+      dockerfile: Dockerfile.devnet
+    image: payrail/node:devnet
+    restart: unless-stopped
+    read_only: true
+    ports:
+      - "${PAYRAIL_BIND_ADDRESS:-127.0.0.1}:${PAYRAIL_PORT:-18080}:8080"
+    volumes:
+      - node-state:/var/lib/payment-platform
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 30s
+
+volumes:
+  node-state:

@@ -1,0 +1,16 @@
+[package]
+name = "payment-reconciliation-service-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+payment-idempotency-core = { path = "../payment-idempotency-core" }
+payment-reconciliation-core = { path = "../payment-reconciliation-core" }
+payment-reconciliation-work-core = { path = "../payment-reconciliation-work-core" }
+receipt-index-core = { path = "../receipt-index-core" }
+
+[lints]
+workspace = true

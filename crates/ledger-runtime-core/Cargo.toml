@@ -1,0 +1,23 @@
+[package]
+name = "ledger-runtime-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+authenticated-state-core = { path = "../authenticated-state-core" }
+ledger-core = { path = "../ledger-core" }
+sha2 = { version = "=0.11.0", default-features = false }
+state-sync-core = { path = "../state-sync-core" }
+tail-sync-core = { path = "../tail-sync-core" }
+transaction-protocol = { path = "../transaction-protocol" }
+transaction-verification-core = { path = "../transaction-verification-core" }
+
+[dev-dependencies]
+ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["zeroize"] }
+transaction-auth-ed25519 = { path = "../transaction-auth-ed25519" }
+
+[lints]
+workspace = true

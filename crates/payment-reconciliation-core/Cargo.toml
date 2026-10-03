@@ -1,0 +1,20 @@
+[package]
+name = "payment-reconciliation-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+payment-idempotency-core = { path = "../payment-idempotency-core" }
+receipt-index-core = { path = "../receipt-index-core" }
+
+[dev-dependencies]
+ledger-core = { path = "../ledger-core" }
+payment-idempotency-lmdb = { path = "../payment-idempotency-lmdb" }
+receipt-index-lmdb = { path = "../receipt-index-lmdb" }
+state-sync-core = { path = "../state-sync-core" }
+
+[lints]
+workspace = true

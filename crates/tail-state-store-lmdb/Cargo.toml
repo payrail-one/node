@@ -1,0 +1,34 @@
+[package]
+name = "tail-state-store-lmdb"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+anyhow = { version = "=1.0.104", default-features = false, features = ["std"] }
+authenticated-state-core = { path = "../authenticated-state-core" }
+borsh = { version = "=1.8.1", default-features = false, features = ["std"] }
+heed = { version = "=0.22.1", default-features = false }
+jmt = { version = "=0.12.0", default-features = false, features = ["std"] }
+ledger-core = { path = "../ledger-core" }
+ledger-runtime-core = { path = "../ledger-runtime-core" }
+network-config-core = { path = "../network-config-core" }
+receipt-index-core = { path = "../receipt-index-core" }
+sha2 = { version = "=0.11.0", default-features = false }
+state-sync-core = { path = "../state-sync-core" }
+tail-sync-core = { path = "../tail-sync-core" }
+
+[dev-dependencies]
+ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["zeroize"] }
+network-config-auth-ed25519 = { path = "../network-config-auth-ed25519" }
+sha2 = { version = "=0.11.0", default-features = false }
+transaction-auth-ed25519 = { path = "../transaction-auth-ed25519" }
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = "deny"
+pedantic = "deny"

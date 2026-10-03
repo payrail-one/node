@@ -1,0 +1,15 @@
+[package]
+name = "payment-idempotency-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+ledger-core = { path = "../ledger-core" }
+state-sync-core = { path = "../state-sync-core" }
+transaction-protocol = { path = "../transaction-protocol" }
+
+[lints]
+workspace = true

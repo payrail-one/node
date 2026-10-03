@@ -1,0 +1,15 @@
+[package]
+name = "authenticated-state-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+anyhow = { version = "=1.0.104", default-features = false, features = ["std"] }
+jmt = { version = "=0.12.0", default-features = false, features = ["std"] }
+sha2 = { version = "=0.11.0", default-features = false }
+
+[lints]
+workspace = true

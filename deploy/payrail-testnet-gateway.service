@@ -1,0 +1,18 @@
+[Unit]
+Description=Payrail public testnet gateway
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=3
+ExecStartPre=-/usr/bin/docker rm -f payrail-testnet-gateway
+ExecStart=/usr/bin/docker run --name payrail-testnet-gateway --network host --read-only --cap-drop ALL --security-opt no-new-privileges:true --volume /var/lib/payrail-testnet:/var/lib/payment-platform --env DEVNET_BIND=127.0.0.1:18080 --env DEVNET_DATA_DIR=/var/lib/payment-platform/devnet payrail/node:devnet
+ExecStop=/usr/bin/docker stop --time 15 payrail-testnet-gateway
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,42 @@
+[workspace]
+members = [
+    "crates/account-address",
+    "crates/authenticated-state-core",
+    "crates/ledger-core",
+    "crates/ledger-runtime-core",
+    "crates/merchant-checkout-core",
+    "crates/merchant-checkout-lmdb",
+    "crates/network-config-auth-ed25519",
+    "crates/network-config-core",
+    "crates/network-membership-core",
+    "crates/payment-gateway-core",
+    "crates/payment-idempotency-core",
+    "crates/payment-idempotency-lmdb",
+    "crates/payment-reconciliation-core",
+    "crates/payment-reconciliation-service-core",
+    "crates/payment-reconciliation-work-core",
+    "crates/receipt-index-core",
+    "crates/receipt-index-lmdb",
+    "crates/receipt-rebuild-core",
+    "crates/state-sync-core",
+    "crates/tail-state-store-lmdb",
+    "crates/tail-sync-core",
+    "crates/transaction-auth-ed25519",
+    "crates/transaction-protocol",
+    "crates/transaction-verification-core",
+    "tools/devnet-gateway",
+]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+license = "UNLICENSED"
+rust-version = "1.88"
+version = "0.0.0"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "deny"
+pedantic = "deny"

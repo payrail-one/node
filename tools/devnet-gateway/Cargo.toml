@@ -1,0 +1,33 @@
+[package]
+name = "devnet-gateway"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+account-address = { path = "../../crates/account-address" }
+axum = { version = "=0.8.9", default-features = false, features = ["http1", "json", "tokio"] }
+ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["zeroize"] }
+ledger-core = { path = "../../crates/ledger-core" }
+ledger-runtime-core = { path = "../../crates/ledger-runtime-core" }
+merchant-checkout-core = { path = "../../crates/merchant-checkout-core" }
+merchant-checkout-lmdb = { path = "../../crates/merchant-checkout-lmdb" }
+network-config-auth-ed25519 = { path = "../../crates/network-config-auth-ed25519" }
+network-config-core = { path = "../../crates/network-config-core" }
+payment-idempotency-core = { path = "../../crates/payment-idempotency-core" }
+receipt-index-core = { path = "../../crates/receipt-index-core" }
+receipt-index-lmdb = { path = "../../crates/receipt-index-lmdb" }
+receipt-rebuild-core = { path = "../../crates/receipt-rebuild-core" }
+serde = { version = "=1.0.229", features = ["derive"] }
+sha2 = { version = "=0.11.0", default-features = false }
+state-sync-core = { path = "../../crates/state-sync-core" }
+tail-state-store-lmdb = { path = "../../crates/tail-state-store-lmdb" }
+tail-sync-core = { path = "../../crates/tail-sync-core" }
+tokio = { version = "=1.53.1", features = ["macros", "net", "rt-multi-thread"] }
+transaction-auth-ed25519 = { path = "../../crates/transaction-auth-ed25519" }
+transaction-protocol = { path = "../../crates/transaction-protocol" }
+
+[lints]
+workspace = true

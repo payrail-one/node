@@ -1,0 +1,25 @@
+[package]
+name = "receipt-rebuild-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+ledger-core = { path = "../ledger-core" }
+ledger-runtime-core = { path = "../ledger-runtime-core" }
+receipt-index-core = { path = "../receipt-index-core" }
+state-sync-core = { path = "../state-sync-core" }
+
+[dev-dependencies]
+ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["zeroize"] }
+network-config-auth-ed25519 = { path = "../network-config-auth-ed25519" }
+network-config-core = { path = "../network-config-core" }
+receipt-index-lmdb = { path = "../receipt-index-lmdb" }
+tail-state-store-lmdb = { path = "../tail-state-store-lmdb" }
+tail-sync-core = { path = "../tail-sync-core" }
+transaction-auth-ed25519 = { path = "../transaction-auth-ed25519" }
+
+[lints]
+workspace = true

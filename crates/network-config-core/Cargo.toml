@@ -1,0 +1,17 @@
+[package]
+name = "network-config-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+ledger-core = { path = "../ledger-core" }
+ledger-runtime-core = { path = "../ledger-runtime-core" }
+network-membership-core = { path = "../network-membership-core" }
+sha2 = { version = "=0.11.0", default-features = false }
+state-sync-core = { path = "../state-sync-core" }
+
+[lints]
+workspace = true

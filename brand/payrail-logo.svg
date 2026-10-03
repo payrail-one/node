@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 156 40" role="img" aria-labelledby="title">
+  <title id="title">Payrail</title>
+  <g transform="translate(16 20) skewX(-15) translate(-12.5 -12.5)">
+    <rect y="1" width="8" height="23" rx="1" fill="#72e6c0"/>
+    <rect x="11" y="5.5" width="8" height="14" rx="1" fill="#72e6c0" opacity=".55"/>
+  </g>
+  <text x="45" y="28" fill="#eff8f5" font-family="Avenir Next,Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" letter-spacing="-.7">payrail</text>
+</svg>

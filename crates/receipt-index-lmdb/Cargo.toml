@@ -1,0 +1,24 @@
+[package]
+name = "receipt-index-lmdb"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+heed = { version = "=0.22.1", default-features = false }
+ledger-core = { path = "../ledger-core" }
+receipt-index-core = { path = "../receipt-index-core" }
+sha2 = { version = "=0.11.0", default-features = false }
+state-sync-core = { path = "../state-sync-core" }
+
+[dev-dependencies]
+ledger-runtime-core = { path = "../ledger-runtime-core" }
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = "deny"
+pedantic = "deny"

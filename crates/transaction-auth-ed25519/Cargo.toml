@@ -1,0 +1,18 @@
+[package]
+name = "transaction-auth-ed25519"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+curve25519-dalek = { version = "=5.0.0", default-features = false }
+ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["batch", "fast"] }
+ledger-core = { path = "../ledger-core" }
+
+[dev-dependencies]
+ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["zeroize"] }
+
+[lints]
+workspace = true
