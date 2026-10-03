@@ -1,0 +1,17 @@
+FROM rust:1.88.0-slim-bookworm AS build
+
+WORKDIR /workspace
+COPY . .
+RUN cargo build --locked -p devnet-gateway
+
+FROM debian:bookworm-slim
+
+RUN useradd --create-home --uid 10001 platform \
+    && install -d -o platform -g platform /var/lib/payment-platform
+COPY --from=build /workspace/target/debug/devnet-gateway /usr/local/bin/devnet-gateway
+
+USER platform
+EXPOSE 8080
+ENV DEVNET_BIND=0.0.0.0:8080
+ENV DEVNET_DATA_DIR=/var/lib/payment-platform/devnet
+ENTRYPOINT ["/usr/local/bin/devnet-gateway"]
