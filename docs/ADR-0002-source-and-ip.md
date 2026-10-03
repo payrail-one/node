@@ -4,18 +4,17 @@ Status: accepted for the public devnet
 
 ## Decision
 
-The source required to build and inspect the Payrail development node may be
-published in a public repository. Public network access, source visibility and
-permission to reuse the source remain separate decisions.
+The source required to build, inspect and operate the Payrail development node
+is published in a public repository under Apache License 2.0.
 
 The public repository is a development-network reference and must identify its
 single-node finality, test-only assets and non-production security posture. It
 must not contain production secrets, signing material, private infrastructure
 addresses, personal operator details or deployment state.
 
-Until a separate licensing decision is approved, the published Rust packages
-remain `UNLICENSED` and non-publishable. Repository visibility alone grants no
-license to copy, modify or redistribute the source.
+The published Rust packages use the SPDX identifier `Apache-2.0`. Operators may
+run, modify and redistribute the public-node source under those terms, including
+the license's patent grant and notice requirements.
 
 Production validator implementation, operational tooling, risk services and
 release artifacts remain subject to separate architecture, security, legal and

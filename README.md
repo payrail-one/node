@@ -85,9 +85,8 @@ npm run build
 [Payrail](https://payrail.one) · [Wallet](https://wallet.payrail.one) ·
 [Explorer](https://explorer.payrail.one) · [Devnet](https://devnet.payrail.one)
 
-## Security and source terms
+## Security and license
 
 Please follow [SECURITY.md](SECURITY.md) for vulnerability reports. The source
-is publicly available for inspection but remains `UNLICENSED`; see
-[LICENSE](LICENSE). Repository visibility does not grant permission to copy,
-modify or redistribute it.
+is licensed under [Apache License 2.0](LICENSE), so anyone may run, inspect,
+modify and redistribute the public node under its terms.
