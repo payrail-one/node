@@ -28,6 +28,7 @@ function isPublicApiPath(pathname: string): boolean {
     pathname === '/api/explorer' ||
     pathname === '/api/transactions' ||
     pathname.startsWith('/api/accounts/') ||
+    pathname.startsWith('/api/contracts/') ||
     pathname === '/health/live' ||
     pathname === '/health/ready'
   );

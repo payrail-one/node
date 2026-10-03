@@ -201,6 +201,7 @@ function createApp() {
           ${endpoint('GET', '/api/status', 'Sync and network status')}
           ${endpoint('GET', '/api/explorer', 'Locally verified blocks')}
           ${endpoint('GET', '/api/accounts/{address}', 'Balance and nonce')}
+          ${endpoint('GET', '/api/contracts/{id}', 'Finalized code and state')}
           ${endpoint('POST', '/api/transactions', 'Relay signed envelope')}
           ${endpoint('GET', '/health/ready', 'Synchronization readiness')}
         </section>
