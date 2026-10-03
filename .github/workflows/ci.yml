@@ -25,3 +25,12 @@ jobs:
         run: cargo +1.88.0 test --locked --workspace
       - name: Lint workspace
         run: cargo +1.88.0 clippy --locked --workspace --all-targets -- -D warnings
+
+  container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Build public-node image
+        run: docker build --file Dockerfile.node --tag payrail/node:ci .

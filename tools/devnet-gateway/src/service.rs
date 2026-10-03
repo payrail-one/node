@@ -28,8 +28,10 @@ use crate::{
     model::{
         AccountStateView, CheckoutView, ExplorerOverviewView, FinalizedBlockView,
         FinalizedTransactionView, NetworkAssetView, NetworkStatusView, SubmissionResultView,
+        SyncBlockView, SyncBootstrapView,
     },
     persistence::DevnetPersistence,
+    sync::{checkpoint_view, decode_block},
 };
 
 pub(crate) const NETWORK: NetworkId = NetworkId::new([17; 32]);
@@ -310,22 +312,72 @@ impl DevnetService {
         }
     }
 
+    /// Returns the immutable trust identity and current height used by replicas.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the durable recovery base cannot be read safely.
+    pub fn sync_bootstrap(&self) -> Result<SyncBootstrapView, DevnetError> {
+        let genesis = self.persistence.recovery_base()?.checkpoint;
+        Ok(SyncBootstrapView {
+            network_id: encode_hex(NETWORK.as_bytes()),
+            finality_mode: "single-node-devnet".to_owned(),
+            genesis: checkpoint_view(genesis),
+            finalized_height: self.checkpoint.height.to_string(),
+        })
+    }
+
+    /// Exports one retained finalized block for a verifying replica.
+    ///
+    /// # Errors
+    ///
+    /// Returns not-found outside the retained finalized range and fails closed
+    /// when durable history cannot be read.
+    pub fn sync_block(&self, height: u64) -> Result<SyncBlockView, DevnetError> {
+        if height == 0 || height > self.checkpoint.height {
+            return Err(DevnetError::SyncBlockNotFound);
+        }
+        let stored = self.persistence.finalized_block(height)?;
+        Ok(SyncBlockView {
+            network_id: encode_hex(NETWORK.as_bytes()),
+            parent: checkpoint_view(stored.previous),
+            checkpoint: checkpoint_view(stored.checkpoint),
+            payload: encode_hex(&stored.payload),
+            finality_proof: encode_hex(DEVNET_FINALITY_PROOF),
+        })
+    }
+
+    /// Verifies, executes and atomically persists the next exported block.
+    ///
+    /// # Errors
+    ///
+    /// Rejects malformed, foreign, non-sequential, forked or commitment-
+    /// mismatched blocks before publishing a new finalized cursor.
+    pub fn apply_sync_block(
+        &mut self,
+        block: &SyncBlockView,
+    ) -> Result<SubmissionResultView, DevnetError> {
+        if block.parent != checkpoint_view(self.checkpoint) {
+            return Err(DevnetError::InvalidSyncBlock);
+        }
+        self.commit_finalized(decode_block(block)?)
+    }
+
+    #[must_use]
+    pub const fn finalized_height(&self) -> u64 {
+        self.checkpoint.height
+    }
+
     fn finalize(&mut self, signed: &SignedOperation) -> Result<SubmissionResultView, DevnetError> {
-        let transfer = match &signed.operation {
-            AuthorizedOperation::Transfer(transfer) => *transfer,
-            _ => return Err(DevnetError::UnsupportedOperation),
-        };
+        if !matches!(signed.operation, AuthorizedOperation::Transfer(_)) {
+            return Err(DevnetError::UnsupportedOperation);
+        }
         let payload = LedgerBlockCodec::encode(std::slice::from_ref(signed))
             .map_err(|_| DevnetError::InvalidEnvelope)?;
         let executed = self
             .executor
             .execute(self.checkpoint, &self.state, &payload)
             .map_err(|_| DevnetError::InvalidTransaction)?;
-        let receipt = executed
-            .receipts
-            .first()
-            .copied()
-            .ok_or(DevnetError::InternalInvariant)?;
         let checkpoint = FinalizedCheckpoint {
             height: self
                 .checkpoint
@@ -336,14 +388,6 @@ impl DevnetService {
             state_root: executed.transition.commitment.state_root,
             validator_set_hash: self.checkpoint.validator_set_hash,
         };
-        let transaction = transaction_view(&self.address_codec, transfer, receipt, checkpoint)?;
-        let block = block_view(checkpoint, 1);
-        let prepared = self.index.prepare_append(
-            self.checkpoint,
-            checkpoint,
-            block.clone(),
-            transaction.clone(),
-        )?;
         let finalized = FinalizedTailBlock {
             network: NETWORK,
             parent_hash: self.checkpoint.block_hash,
@@ -351,15 +395,42 @@ impl DevnetService {
             payload: payload.clone(),
             finality_proof: DEVNET_FINALITY_PROOF.to_vec(),
         };
-        let transition = executed.transition.clone();
-        let (verified, ()) = TailSyncSession::new(NETWORK, self.checkpoint)
-            .verify_next_with(finalized, &DevnetFinality, |_previous, _payload| {
-                Some((transition, ()))
+        self.commit_finalized(finalized)
+    }
+
+    fn commit_finalized(
+        &mut self,
+        finalized: FinalizedTailBlock,
+    ) -> Result<SubmissionResultView, DevnetError> {
+        let previous = self.checkpoint;
+        let (verified, executed) = TailSyncSession::new(NETWORK, previous)
+            .verify_next_with(finalized, &DevnetFinality, |checkpoint, payload| {
+                self.executor
+                    .execute(checkpoint, &self.state, payload)
+                    .ok()
+                    .map(|executed| (executed.transition.clone(), executed))
             })
-            .map_err(|_| DevnetError::InternalInvariant)?;
+            .map_err(|_| DevnetError::InvalidSyncBlock)?;
+        let operations = LedgerBlockCodec::decode(verified.payload())
+            .map_err(|_| DevnetError::InvalidSyncBlock)?;
+        let [signed] = operations.as_slice() else {
+            return Err(DevnetError::InvalidSyncBlock);
+        };
+        let AuthorizedOperation::Transfer(transfer) = signed.operation else {
+            return Err(DevnetError::UnsupportedOperation);
+        };
+        let [receipt] = executed.receipts.as_slice() else {
+            return Err(DevnetError::InternalInvariant);
+        };
+        let checkpoint = verified.checkpoint();
+        let transaction = transaction_view(&self.address_codec, transfer, *receipt, checkpoint)?;
+        let block = block_view(checkpoint, 1);
+        let prepared =
+            self.index
+                .prepare_append(previous, checkpoint, block.clone(), transaction.clone())?;
         let receipt_block = FinalizedReceiptBlock {
             network: NETWORK,
-            previous: self.checkpoint,
+            previous,
             checkpoint,
             receipts: executed.receipts,
         };

@@ -1,0 +1,24 @@
+[package]
+name = "payrail-node"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+axum = { version = "=0.8.9", default-features = false, features = ["http1", "json", "tokio"] }
+devnet-gateway = { path = "../devnet-gateway" }
+reqwest = { version = "=0.13.2", default-features = false, features = ["json", "rustls-no-provider"] }
+rustls = { version = "=0.23.45", default-features = false, features = ["ring", "std"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+tokio = { version = "=1.53.1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+
+[dev-dependencies]
+account-address = { path = "../../crates/account-address" }
+ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["zeroize"] }
+ledger-core = { path = "../../crates/ledger-core" }
+
+[lints]
+workspace = true

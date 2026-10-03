@@ -25,6 +25,7 @@ members = [
     "crates/transaction-protocol",
     "crates/transaction-verification-core",
     "tools/devnet-gateway",
+    "tools/payrail-node",
 ]
 resolver = "3"
 

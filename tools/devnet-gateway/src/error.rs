@@ -20,6 +20,8 @@ pub enum DevnetError {
     CheckoutConflict,
     AccountAlreadyFunded,
     FaucetExhausted,
+    SyncBlockNotFound,
+    InvalidSyncBlock,
     StateUnavailable,
     InternalInvariant,
 }
@@ -32,8 +34,9 @@ impl DevnetError {
             | Self::InvalidEnvelope
             | Self::UnsupportedOperation
             | Self::InvalidTransaction
-            | Self::InvalidCheckout => StatusCode::BAD_REQUEST,
-            Self::CheckoutNotFound => StatusCode::NOT_FOUND,
+            | Self::InvalidCheckout
+            | Self::InvalidSyncBlock => StatusCode::BAD_REQUEST,
+            Self::CheckoutNotFound | Self::SyncBlockNotFound => StatusCode::NOT_FOUND,
             Self::AccountAlreadyFunded | Self::CheckoutConflict => StatusCode::CONFLICT,
             Self::FaucetExhausted => StatusCode::SERVICE_UNAVAILABLE,
             Self::StateUnavailable | Self::InternalInvariant => StatusCode::INTERNAL_SERVER_ERROR,
@@ -54,6 +57,8 @@ impl fmt::Display for DevnetError {
             Self::CheckoutConflict => "development checkout is already claimed or conflicts",
             Self::AccountAlreadyFunded => "this development account already used the faucet",
             Self::FaucetExhausted => "development faucet has insufficient funds",
+            Self::SyncBlockNotFound => "finalized synchronization block was not found",
+            Self::InvalidSyncBlock => "invalid finalized synchronization block",
             Self::StateUnavailable => "development state is unavailable",
             Self::InternalInvariant => "development network invariant failed",
         })

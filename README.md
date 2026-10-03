@@ -1,15 +1,16 @@
 # Payrail Node
 
-Payrail Node is the source distribution of the Payrail development network. It
-provides a deterministic Rust ledger, client-signed Ed25519 payments, checked
-integer balances, nonce replay protection, persistent LMDB state and an
-independently maintained finalized-receipt index.
+Payrail Node is a self-hosted public replica of the Payrail development network.
+Anyone can run it. The node follows configured Payrail upstreams, independently
+re-executes every sequential finalized block and stores its own durable LMDB
+ledger and receipt index.
 
-> **Development network only.** This build uses single-node development
-> finality and test assets with no monetary value. It is not a production
+> **Development network only.** The current upstream uses single-node
+> development finality and test assets with no monetary value. This node checks
+> deterministic state transitions and fork continuity, but it is not yet a
 > validator or a claim of multi-validator BFT finality.
 
-## Run a local node
+## Run a public node
 
 Docker Engine with Compose v2 is the shortest path:
 
@@ -18,10 +19,13 @@ git clone https://github.com/payrail-one/node.git
 cd node
 docker compose up --build --detach
 curl --fail http://127.0.0.1:18080/api/status
+curl --fail http://127.0.0.1:18080/health/ready
 ```
 
-The API is bound to loopback by default. Ledger data is retained in the
-`node-state` Docker volume across container restarts.
+The API is bound to loopback by default. The node follows
+`https://devnet.payrail.one` and retains verified ledger data in the
+`node-state` Docker volume across restarts. Configure several comma-separated
+origins with `PAYRAIL_NODE_UPSTREAMS` for failover.
 
 ```sh
 docker compose logs --follow node
@@ -36,13 +40,16 @@ deleting the state volume.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/status` | Network height, finality mode and identity |
+| `GET` | `/health/live` | Process liveness |
+| `GET` | `/health/ready` | Successful upstream synchronization |
 | `GET` | `/api/accounts/{address}` | Finalized balance and nonce |
 | `POST` | `/api/transactions` | Submit a canonical signed envelope |
 | `GET` | `/api/explorer` | Finalized blocks and transaction summaries |
-| `POST` | `/api/faucet` | Claim test-only development assets |
-| `POST` | `/api/checkouts` | Create a test merchant checkout |
-| `GET` | `/api/checkouts/{id}` | Read checkout state |
-| `POST` | `/api/checkouts/{id}/transactions` | Pay a checkout with a signed envelope |
+
+Reads come from the locally synchronized database. Signed transaction envelopes
+are relayed to the primary upstream and later appear locally through the same
+verified synchronization path. The public-node API deliberately excludes faucet
+and checkout-administration routes.
 
 Wallet signing and canonical envelope construction are intentionally outside
 the node trust boundary. Private keys must never be sent to these endpoints.
@@ -52,7 +59,7 @@ the node trust boundary. Private keys must never be sent to these endpoints.
 Rust 1.88 is pinned by `rust-toolchain.toml`.
 
 ```sh
-cargo run --locked -p devnet-gateway
+cargo run --locked -p payrail-node
 bash scripts/quality.sh
 ```
 

@@ -4,14 +4,17 @@ services:
   node:
     build:
       context: .
-      dockerfile: Dockerfile.devnet
-    image: payrail/node:devnet
+      dockerfile: Dockerfile.node
+    image: payrail/node:latest
     restart: unless-stopped
     read_only: true
     ports:
       - "${PAYRAIL_BIND_ADDRESS:-127.0.0.1}:${PAYRAIL_PORT:-18080}:8080"
     volumes:
-      - node-state:/var/lib/payment-platform
+      - node-state:/var/lib/payrail
+    environment:
+      PAYRAIL_NODE_UPSTREAMS: ${PAYRAIL_NODE_UPSTREAMS:-https://devnet.payrail.one}
+      PAYRAIL_NODE_DATA_DIR: /var/lib/payrail/node
     tmpfs:
       - /tmp:size=64m,mode=1777
     security_opt:

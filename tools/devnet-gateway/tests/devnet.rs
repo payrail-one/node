@@ -218,6 +218,71 @@ fn finalized_state_faucet_history_and_explorer_recover_after_restart() {
 }
 
 #[test]
+fn replica_verifies_syncs_and_recovers_exported_finalized_blocks() {
+    let source_directory = TestDirectory::new("replica-source");
+    let replica_directory = TestDirectory::new("replica-target");
+    let sender_key = SigningKey::from_bytes(&[101; 32]);
+    let sender_address = address(&sender_key);
+    let mut source = DevnetService::open(&source_directory.0).unwrap();
+    source.faucet(&sender_address).unwrap();
+
+    let bootstrap = source.sync_bootstrap().unwrap();
+    assert_eq!(bootstrap.finalized_height, "1");
+    let block = source.sync_block(1).unwrap();
+    let mut replica = DevnetService::open(&replica_directory.0).unwrap();
+    replica.apply_sync_block(&block).unwrap();
+    assert_eq!(replica.finalized_height(), 1);
+    assert_eq!(
+        replica.account(&sender_address).unwrap().balance,
+        "100000000"
+    );
+
+    drop(replica);
+    let recovered = DevnetService::open(&replica_directory.0).unwrap();
+    assert_eq!(recovered.finalized_height(), 1);
+    assert_eq!(
+        recovered.account(&sender_address).unwrap().balance,
+        "100000000"
+    );
+}
+
+#[test]
+fn replica_rejects_tampered_block_without_advancing() {
+    let source_directory = TestDirectory::new("tampered-source");
+    let replica_directory = TestDirectory::new("tampered-target");
+    let sender_key = SigningKey::from_bytes(&[102; 32]);
+    let mut source = DevnetService::open(&source_directory.0).unwrap();
+    source.faucet(&address(&sender_key)).unwrap();
+    let mut block = source.sync_block(1).unwrap();
+    block.checkpoint.state_root.replace_range(0..2, "00");
+
+    let mut replica = DevnetService::open(&replica_directory.0).unwrap();
+    assert_eq!(
+        replica.apply_sync_block(&block),
+        Err(DevnetError::InvalidSyncBlock)
+    );
+    assert_eq!(replica.finalized_height(), 0);
+}
+
+#[test]
+fn replica_rejects_conflicting_parent_metadata_without_advancing() {
+    let source_directory = TestDirectory::new("parent-source");
+    let replica_directory = TestDirectory::new("parent-target");
+    let sender_key = SigningKey::from_bytes(&[103; 32]);
+    let mut source = DevnetService::open(&source_directory.0).unwrap();
+    source.faucet(&address(&sender_key)).unwrap();
+    let mut block = source.sync_block(1).unwrap();
+    block.parent.state_root.replace_range(0..2, "00");
+
+    let mut replica = DevnetService::open(&replica_directory.0).unwrap();
+    assert_eq!(
+        replica.apply_sync_block(&block),
+        Err(DevnetError::InvalidSyncBlock)
+    );
+    assert_eq!(replica.finalized_height(), 0);
+}
+
+#[test]
 fn fixed_checkout_finalizes_once_and_recovers_with_the_ledger() {
     let directory = TestDirectory::new("checkout");
     let payer_key = SigningKey::from_bytes(&[101; 32]);

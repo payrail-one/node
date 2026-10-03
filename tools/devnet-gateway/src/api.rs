@@ -42,6 +42,19 @@ pub async fn explorer(
     with_service(&state, |service| Ok(service.explorer())).map(Json)
 }
 
+pub async fn sync_bootstrap(
+    State(state): State<AppState>,
+) -> Result<Json<crate::SyncBootstrapView>, DevnetError> {
+    with_service(&state, |service| service.sync_bootstrap()).map(Json)
+}
+
+pub async fn sync_block(
+    State(state): State<AppState>,
+    Path(height): Path<u64>,
+) -> Result<Json<crate::SyncBlockView>, DevnetError> {
+    with_service(&state, |service| service.sync_block(height)).map(Json)
+}
+
 pub async fn create_checkout(
     State(state): State<AppState>,
     Json(request): Json<CreateCheckoutRequest>,

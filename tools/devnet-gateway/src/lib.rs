@@ -8,6 +8,7 @@ mod index;
 mod model;
 mod persistence;
 mod service;
+mod sync;
 
 use std::sync::{Arc, Mutex};
 
@@ -17,6 +18,10 @@ use axum::{
 };
 
 pub use error::DevnetError;
+pub use model::{
+    AccountStateView, ExplorerOverviewView, NetworkAssetView, NetworkStatusView,
+    SubmissionResultView, SubmitRequest, SyncBlockView, SyncBootstrapView, SyncCheckpointView,
+};
 pub use service::DevnetService;
 
 #[derive(Clone)]
@@ -45,6 +50,8 @@ pub fn router(state: AppState) -> Router {
         .route("/api/faucet", post(api::faucet))
         .route("/api/transactions", post(api::submit))
         .route("/api/explorer", get(api::explorer))
+        .route("/api/sync/bootstrap", get(api::sync_bootstrap))
+        .route("/api/sync/blocks/{height}", get(api::sync_block))
         .route("/api/checkouts", post(api::create_checkout))
         .route("/api/checkouts/{id}", get(api::checkout))
         .route(

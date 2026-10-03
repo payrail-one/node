@@ -63,6 +63,34 @@ pub struct SubmissionResultView {
     pub checkpoint: FinalizedBlockView,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncCheckpointView {
+    pub height: String,
+    pub block_hash: String,
+    pub state_root: String,
+    pub validator_set_hash: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncBootstrapView {
+    pub network_id: String,
+    pub finality_mode: String,
+    pub genesis: SyncCheckpointView,
+    pub finalized_height: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncBlockView {
+    pub network_id: String,
+    pub parent: SyncCheckpointView,
+    pub checkpoint: SyncCheckpointView,
+    pub payload: String,
+    pub finality_proof: String,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckoutView {
@@ -85,7 +113,7 @@ pub struct FaucetRequest {
     pub address: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SubmitRequest {
     pub envelope: String,
 }
