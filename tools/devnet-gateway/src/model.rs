@@ -63,6 +63,35 @@ pub struct SubmissionResultView {
     pub checkpoint: FinalizedBlockView,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub(crate) enum LiveEvent {
+    Finalized {
+        transaction: FinalizedTransactionView,
+        checkpoint: FinalizedBlockView,
+    },
+    CheckoutUpdated {
+        checkout: CheckoutView,
+    },
+}
+
+impl LiveEvent {
+    #[must_use]
+    pub(crate) fn concerns(&self, address: &str) -> bool {
+        match self {
+            Self::Finalized { transaction, .. } => {
+                transaction.from == address || transaction.to == address
+            }
+            Self::CheckoutUpdated { checkout } => {
+                checkout.merchant_address == address
+                    || checkout.transaction.as_ref().is_some_and(|transaction| {
+                        transaction.from == address || transaction.to == address
+                    })
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncCheckpointView {

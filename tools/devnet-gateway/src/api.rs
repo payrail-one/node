@@ -7,7 +7,7 @@ use crate::{
     AppState, DevnetError,
     model::{
         AccountStateView, CheckoutView, CreateCheckoutRequest, ExplorerOverviewView, FaucetRequest,
-        NetworkStatusView, SubmissionResultView, SubmitRequest,
+        LiveEvent, NetworkStatusView, SubmissionResultView, SubmitRequest,
     },
 };
 
@@ -26,14 +26,18 @@ pub async fn faucet(
     State(state): State<AppState>,
     Json(request): Json<FaucetRequest>,
 ) -> Result<Json<SubmissionResultView>, DevnetError> {
-    with_service(&state, |service| service.faucet(&request.address)).map(Json)
+    let result = with_service(&state, |service| service.faucet(&request.address))?;
+    publish_finalized(&state, &result);
+    Ok(Json(result))
 }
 
 pub async fn submit(
     State(state): State<AppState>,
     Json(request): Json<SubmitRequest>,
 ) -> Result<Json<SubmissionResultView>, DevnetError> {
-    with_service(&state, |service| service.submit_hex(&request.envelope)).map(Json)
+    let result = with_service(&state, |service| service.submit_hex(&request.envelope))?;
+    publish_finalized(&state, &result);
+    Ok(Json(result))
 }
 
 pub async fn explorer(
@@ -59,14 +63,17 @@ pub async fn create_checkout(
     State(state): State<AppState>,
     Json(request): Json<CreateCheckoutRequest>,
 ) -> Result<Json<CheckoutView>, DevnetError> {
-    with_service(&state, |service| {
+    let checkout = with_service(&state, |service| {
         service.create_checkout(
             &request.merchant_address,
             &request.amount,
             &request.order_reference,
         )
-    })
-    .map(Json)
+    })?;
+    state.publish(LiveEvent::CheckoutUpdated {
+        checkout: checkout.clone(),
+    });
+    Ok(Json(checkout))
 }
 
 pub async fn checkout(
@@ -81,10 +88,20 @@ pub async fn submit_checkout(
     Path(id): Path<String>,
     Json(request): Json<SubmitRequest>,
 ) -> Result<Json<CheckoutView>, DevnetError> {
-    with_service(&state, |service| {
+    let checkout = with_service(&state, |service| {
         service.submit_checkout(&id, &request.envelope)
-    })
-    .map(Json)
+    })?;
+    state.publish(LiveEvent::CheckoutUpdated {
+        checkout: checkout.clone(),
+    });
+    Ok(Json(checkout))
+}
+
+fn publish_finalized(state: &AppState, result: &SubmissionResultView) {
+    state.publish(LiveEvent::Finalized {
+        transaction: result.transaction.clone(),
+        checkpoint: result.checkpoint.clone(),
+    });
 }
 
 fn with_service<T>(
