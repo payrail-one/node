@@ -1,0 +1,52 @@
+:root {
+  --pr-ink: #071218;
+  --pr-paper: #edf5f1;
+  --pr-muted: #91a59f;
+  --pr-line: #ffffff1a;
+  --pr-accent: #72e6c0;
+  --pr-accent-ink: #06231c;
+  --pr-surface: #0b1a21;
+}
+
+.pr-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: fit-content;
+  color: var(--pr-paper);
+  font-family: 'Avenir Next', 'Segoe UI', Arial, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.pr-brand__mark {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 25px;
+  height: 25px;
+  transform: skewX(-15deg);
+}
+
+.pr-brand__mark i {
+  width: 8px;
+  height: 23px;
+  border-radius: 1px;
+  background: var(--pr-accent);
+}
+
+.pr-brand__mark i:last-child {
+  height: 14px;
+  opacity: 0.55;
+}
+
+.pr-public-header {
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--pr-line);
+}

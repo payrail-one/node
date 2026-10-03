@@ -1,5 +1,7 @@
 .devnet/
 target/
+web/node_modules/
+web/apps/node/dist/
 .DS_Store
 **/__pycache__/
 *.py[cod]

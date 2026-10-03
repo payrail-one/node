@@ -1,0 +1,13 @@
+{
+  "name": "@platform/ui-kit",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "dependencies": {
+    "workstar": "0.2.2"
+  }
+}

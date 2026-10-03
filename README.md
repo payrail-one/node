@@ -70,6 +70,16 @@ The workspace keeps ledger, authorization, persistence and indexing behind
 explicit crate boundaries. Architectural and security decisions are recorded
 under `docs/`.
 
+The hosted operator console is versioned in `web/` and uses the same shared
+Payrail UI primitives as the wallet and explorer:
+
+```sh
+cd web
+npm ci --ignore-scripts
+npm run check
+npm run build
+```
+
 ## Live development network
 
 [Payrail](https://payrail.one) · [Wallet](https://wallet.payrail.one) ·

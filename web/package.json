@@ -1,0 +1,22 @@
+{
+  "name": "payrail-one-node-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "workspaces": [
+    "apps/node",
+    "packages/ui-kit"
+  ],
+  "scripts": {
+    "check": "npm run check --workspaces --if-present",
+    "build": "npm run build --workspace @platform/payrail-public-node",
+    "deploy": "npm run deploy --workspace @platform/payrail-public-node",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "3.8.3",
+    "typescript": "6.0.3",
+    "vite": "8.0.16",
+    "wrangler": "4.147.0"
+  }
+}
