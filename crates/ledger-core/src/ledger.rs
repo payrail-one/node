@@ -11,7 +11,7 @@ use crate::{
     BackingRequirement, Balance, Event, GenesisConfig, LedgerError, NetworkId, Nonce,
 };
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Ledger {
     network: NetworkId,
     registry_authority: AccountId,

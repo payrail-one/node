@@ -1,0 +1,25 @@
+[Unit]
+Description=Settle finalized Ethereum deposits into Payrail
+After=network-online.target payrail-ethereum-bridge-observer.service payrail-testnet-gateway.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=payrail-eth-observer
+Group=payrail-eth-observer
+UMask=0077
+EnvironmentFile=/etc/payrail/ethereum-bridge-observer.env
+ExecStart=/usr/local/bin/ethereum-bridge-observer settle-deposits
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/payrail-ethereum-observer
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictSUIDSGID=true

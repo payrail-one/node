@@ -1,0 +1,33 @@
+[Unit]
+Description=Payrail finalized Ethereum bridge observer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=payrail-eth-observer
+Group=payrail-eth-observer
+UMask=0077
+StateDirectory=payrail-ethereum-observer
+EnvironmentFile=/etc/payrail/ethereum-bridge-observer.env
+ExecStart=/usr/local/bin/ethereum-bridge-observer run
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=30
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/payrail-ethereum-observer
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

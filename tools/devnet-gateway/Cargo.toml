@@ -16,6 +16,10 @@ checkout-approval-random = { path = "../../crates/checkout-approval-random" }
 consensus-signer-core = { path = "../../crates/consensus-signer-core" }
 consensus-signer-journal-fs = { path = "../../crates/consensus-signer-journal-fs" }
 ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["zeroize"] }
+ethereum-bridge-core = { path = "../../crates/ethereum-bridge-core" }
+external-asset-core = { path = "../../crates/external-asset-core" }
+external-asset-runtime-core = { path = "../../crates/external-asset-runtime-core" }
+external-asset-settlement-core = { path = "../../crates/external-asset-settlement-core" }
 finality-auth-ed25519 = { path = "../../crates/finality-auth-ed25519" }
 finality-proof-core = { path = "../../crates/finality-proof-core" }
 hmac = { version = "=0.12.1", default-features = false }
@@ -31,8 +35,8 @@ payment-ingress-core = { path = "../../crates/payment-ingress-core" }
 payment-rate-limit-lmdb = { path = "../../crates/payment-rate-limit-lmdb" }
 receipt-index-core = { path = "../../crates/receipt-index-core" }
 receipt-index-lmdb = { path = "../../crates/receipt-index-lmdb" }
-receipt-rebuild-core = { path = "../../crates/receipt-rebuild-core" }
-reqwest = { version = "=0.13.2", default-features = false, features = ["blocking", "json"] }
+reqwest = { version = "=0.13.2", default-features = false, features = ["blocking", "json", "rustls-no-provider"] }
+rustls = { version = "=0.23.45", default-features = false, features = ["ring", "std"] }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.151"
 sha2 = { version = "=0.11.0", default-features = false }

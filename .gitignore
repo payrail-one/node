@@ -5,3 +5,8 @@ web/apps/node/dist/
 .DS_Store
 **/__pycache__/
 *.py[cod]
+contracts/ethereum/node_modules/
+contracts/ethereum/artifacts/
+contracts/ethereum/cache/
+contracts/ethereum/deployments/*.local.json
+contracts/ethereum/deployments/*.local.env

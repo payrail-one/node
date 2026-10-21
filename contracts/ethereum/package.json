@@ -1,0 +1,21 @@
+{
+  "name": "payrail-ethereum-bridge-contracts",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "compile": "hardhat compile",
+    "wallet:testnet": "node scripts/create-testnet-wallet.mjs",
+    "deploy:sepolia": "node scripts/deploy-sepolia.mjs",
+    "deploy:usdt-sepolia": "node scripts/deploy-usdt-sepolia.mjs",
+    "observer-config:sepolia": "node scripts/render-sepolia-observer-config.mjs",
+    "deposit:sepolia": "node scripts/deposit-native-sepolia.mjs",
+    "deposit:usdt-sepolia": "node scripts/deposit-usdt-sepolia.mjs",
+    "test": "hardhat test solidity --test-profile ci"
+  },
+  "devDependencies": {
+    "ethers": "6.17.0",
+    "hardhat": "3.20.0"
+  }
+}

@@ -2,6 +2,7 @@
 
 mod api;
 mod approval;
+mod bridge;
 mod checkout;
 mod codec;
 mod contract_view;
@@ -11,6 +12,7 @@ mod live;
 mod model;
 mod persistence;
 mod quorum;
+mod recovery;
 mod replica;
 mod service;
 mod sync;
@@ -34,11 +36,15 @@ use crate::{
 
 pub use error::DevnetError;
 pub use model::{
-    AccountStateView, ContractExecutionView, ContractStateEntryView, ContractView,
-    ExplorerOverviewView, NetworkAssetView, NetworkStatusView, SubmissionResultView, SubmitRequest,
-    SyncBlockView, SyncBootstrapView, SyncCheckpointView,
+    AccountStateView, BridgeSubmitRequest, ContractExecutionView, ContractStateEntryView,
+    ContractView, ExplorerOverviewView, NetworkAssetView, NetworkStatusView, SubmissionResultView,
+    SubmitRequest, SyncBlockView, SyncBootstrapView, SyncCheckpointView,
 };
 pub use service::DevnetService;
+
+pub(crate) fn install_tls_provider() {
+    let _already_installed = rustls::crypto::ring::default_provider().install_default();
+}
 
 /// Returns the public validator key for one raw 32-byte seed file.
 ///
@@ -145,6 +151,8 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/api/status", get(api::status))
         .route("/api/accounts/{address}", get(api::account))
+        .route("/api/bridge/accounts/{address}", get(api::bridge_account))
+        .route("/api/bridge/operations", post(api::submit_bridge))
         .route("/api/faucet", post(api::faucet))
         .route("/api/transactions", post(api::submit))
         .route("/api/contracts/{id}", get(api::contract))

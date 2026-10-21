@@ -14,7 +14,8 @@ use crate::{
     rows::read_rows,
     store::{
         AUTHENTICATED_STATE_KEY, BASE_KEY, COMMITMENT_POLICY_KEY, CURRENT_KEY, LmdbTailStateStore,
-        PROTOCOL_CONFIG_DIGEST_KEY, REGISTRY_AUTHORITY_KEY, validate_next,
+        PROTOCOL_CONFIG_DIGEST_KEY, REGISTRY_AUTHORITY_KEY, STATE_IMAGE_KIND_KEY, StateImageKind,
+        validate_next,
     },
 };
 
@@ -220,9 +221,46 @@ impl LmdbTailStateStore {
             .get(&transaction, REGISTRY_AUTHORITY_KEY)?
             .is_some()
         {
-            self.validate_ledger_state(&transaction, current)?;
+            let kind = self
+                .metadata
+                .get(&transaction, STATE_IMAGE_KIND_KEY)?
+                .map(StateImageKind::decode)
+                .transpose()?
+                .unwrap_or(StateImageKind::LedgerV1);
+            match kind {
+                StateImageKind::LedgerV1 => self.validate_ledger_state(&transaction, current)?,
+                StateImageKind::CompositeV1 => {
+                    self.validate_composite_state(&transaction, current)?;
+                }
+            }
         }
         Ok(())
+    }
+
+    fn validate_composite_state(
+        &self,
+        transaction: &heed::RoTxn<'_>,
+        current: FinalizedCheckpoint,
+    ) -> Result<(), LmdbStateStoreError> {
+        if self.commitment_policy.scheme_at(current.height)
+            != ledger_runtime_core::StateCommitmentScheme::CanonicalStateV1
+        {
+            return Err(LmdbStateStoreError::CorruptRecord);
+        }
+        let stored = self
+            .states
+            .get(transaction, current.state_root.as_bytes().as_slice())?
+            .ok_or(LmdbStateStoreError::CorruptRecord)?;
+        let canonical = decode_state(stored)?;
+        if self
+            .commitment_policy
+            .root_for_state(current.height, self.network, &canonical)
+            .map_err(|_| LmdbStateStoreError::CorruptRecord)?
+            != current.state_root
+        {
+            return Err(LmdbStateStoreError::CorruptRecord);
+        }
+        self.validate_authenticated_ledger_rows(transaction, current)
     }
 
     fn validate_ledger_state(
@@ -249,6 +287,15 @@ impl LmdbTailStateStore {
         if decode_state(stored)? != canonical {
             return Err(LmdbStateStoreError::CorruptRecord);
         }
+        self.validate_authenticated_ledger_rows(transaction, current)
+    }
+
+    fn validate_authenticated_ledger_rows(
+        &self,
+        transaction: &heed::RoTxn<'_>,
+        current: FinalizedCheckpoint,
+    ) -> Result<(), LmdbStateStoreError> {
+        let snapshot = self.read_ledger_snapshot(transaction)?;
         let authenticated = self.read_authenticated_state(transaction)?;
         if authenticated.latest_height != current.height
             || authenticated_state_root(&snapshot)

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "network": "sepolia",
+  "chainId": "11155111",
+  "assetPurpose": "testnet-usdt-integration-only",
+  "productionOrigin": {
+    "network": "ethereum-mainnet",
+    "chainId": "1",
+    "token": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+  },
+  "contract": "PayrailTokenVault",
+  "address": "0x74E345a36BCf50B253bac512C322d1a8Abc6b298",
+  "deploymentTransaction": "0xb118ea9a3b2e9a6e1cd90cdd8839fae7e0daef86eff886d81ca9d8560ec1b9cb",
+  "deploymentBlock": "11963013",
+  "deploymentBlockHash": "0x3612f275d78beee1da2d6a3a673dcbe0433b972c41ede11253e57ea253f1a18a",
+  "deploymentBlockParentHash": "0x0cebb7a40f46a6381a77451dbc453abba6ea29506182cf51764976e51cd847fd",
+  "deployer": "0x1586eC91f476d14ae8D5Ac6e9B56785A2387571a",
+  "owner": "0xfbFDE4e3Ab7CfC4798B57450c8d426aD330F962b",
+  "releaseAuthority": "0x7E51e42a019f2f07E34F05B023805E16ac6B64cC",
+  "confirmations": 2,
+  "token": {
+    "contract": "PayrailTestUsdt",
+    "address": "0x5e3a1bBB81d5C3c1391796E4e3c8c4E0420a8c4a",
+    "symbol": "tUSDT",
+    "decimals": 6,
+    "totalSupplyAtomic": "1000000000000",
+    "deploymentTransaction": "0xce16fd179cbc937649a1379e0f758f45b853267ed81fdf916676fcc44f0564c3",
+    "deploymentBlock": "11963010",
+    "deploymentBlockHash": "0x981d0ba2a7c299b42eb26d0154a854e1c5f7f97d11e369a20f514af3a3d0f47f",
+    "artifact": {
+      "compilerVersion": "0.8.24",
+      "abiSha256": "12d71052dcb159e87ed16856a0c8bb7b92b2a63640985941316b20f486d497e6",
+      "creationBytecodeSha256": "7d6dbd2b4120f07acc3ec64b157e526b3a90e886e131fdfe53ede8ef34c8e4a7",
+      "runtimeBytecodeSha256": "6f28edd4b7c46dc75e1d324e1c345f61f5dadf4cf97e06925449f0b3ef57390e"
+    }
+  },
+  "artifact": {
+    "compilerVersion": "0.8.24",
+    "abiSha256": "e802a99924eb740d3e0d4bf530822df8cadde724f251046313449e0bdff0e4fd",
+    "creationBytecodeSha256": "4c1c567a1372e1de8811ef02f29bc3d675e82c8138260a4e3be7bec6320cf1ad",
+    "runtimeBytecodeSha256": "85445463fb4b479632729a808b219bee548f0d5303b59addf5daa926a6eb913d"
+  },
+  "verifiedDeposit": {
+    "transaction": "0xf3a74c319d3005b8d2c8e66d6e10e997550d72342613a09060066f316766bd12",
+    "block": "11963019",
+    "blockHash": "0xc359546511e69d0a212f4d8c887db9d9ebe08c9a9b767a95a6a9a88ea4a51cb4",
+    "eventIndex": 156,
+    "depositNonce": "0",
+    "amountAtomic": "100000000",
+    "payrailAccountId": "17cb79fb2b4120f2b1ec65e4198d6e08b28e813feb01e4a400839b85e18080ce",
+    "payrailFinalizedHeight": "71",
+    "payrailBlockHash": "b14ed09af911cc557697956f54aa372fb0df4389ff9296e884fff977d2415057",
+    "payrailStateRoot": "6c4eb910a0a1a10ad3e26bad8cc560d4baf68cab7eaf8a52f8a011d3b996d4c1"
+  }
+}

@@ -1,0 +1,15 @@
+[package]
+name = "ethereum-bridge-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+external-asset-core = { path = "../external-asset-core" }
+ledger-core = { path = "../ledger-core" }
+sha2 = { version = "=0.11.0", default-features = false }
+
+[lints]
+workspace = true

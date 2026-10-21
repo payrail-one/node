@@ -8,10 +8,10 @@ use checkout_approval_core::ApprovalCodeState;
 use crate::{
     AppState, DevnetError,
     model::{
-        AccountStateView, ApprovalCodeChallengeView, ApprovalCodeClaimView, CheckoutView,
-        ClaimApprovalCodeRequest, ContractView, CreateCheckoutRequest, ExplorerOverviewView,
-        FaucetRequest, IssueApprovalCodeRequest, IssuedApprovalCodeView, LiveEvent,
-        NetworkStatusView, SubmissionResultView, SubmitRequest,
+        AccountStateView, ApprovalCodeChallengeView, ApprovalCodeClaimView, BridgeSubmitRequest,
+        CheckoutView, ClaimApprovalCodeRequest, ContractView, CreateCheckoutRequest,
+        ExplorerOverviewView, FaucetRequest, IssueApprovalCodeRequest, IssuedApprovalCodeView,
+        LiveEvent, NetworkStatusView, SubmissionResultView, SubmitRequest,
     },
     quorum::{QuorumProposal, QuorumValidatorStatus, QuorumVote},
 };
@@ -42,6 +42,28 @@ pub async fn account(
     with_service(state, move |service| service.account(&address))
         .await
         .map(Json)
+}
+
+pub async fn bridge_account(
+    State(state): State<AppState>,
+    Path(address): Path<String>,
+) -> Result<Json<AccountStateView>, DevnetError> {
+    with_service(state, move |service| service.bridge_account(&address))
+        .await
+        .map(Json)
+}
+
+pub async fn submit_bridge(
+    State(state): State<AppState>,
+    Json(request): Json<BridgeSubmitRequest>,
+) -> Result<Json<SubmissionResultView>, DevnetError> {
+    let operation_state = state.clone();
+    let result = with_service(operation_state, move |service| {
+        service.submit_bridge_hex(&request.payload)
+    })
+    .await?;
+    publish_finalized(&state, &result);
+    Ok(Json(result))
 }
 
 pub async fn faucet(

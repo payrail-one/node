@@ -19,6 +19,7 @@ pub struct NetworkStatusView {
     pub online_validators: usize,
     pub quorum_weight: u64,
     pub asset: NetworkAssetView,
+    pub bridge_asset: NetworkAssetView,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -179,6 +180,11 @@ pub struct FaucetRequest {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SubmitRequest {
     pub envelope: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct BridgeSubmitRequest {
+    pub payload: String,
 }
 
 #[derive(Debug, Deserialize)]

@@ -1,7 +1,7 @@
 use ledger_core::LedgerSnapshot;
 use ledger_runtime_core::{
     LedgerStateCodec, LedgerStateRows, StateCommitmentScheme, authenticated_state_delta,
-    authenticated_state_entries,
+    authenticated_state_entries, state_root,
 };
 use state_sync_core::{FinalizedCheckpoint, SyncCompletion};
 use tail_sync_core::VerifiedTailBlock;
@@ -15,7 +15,8 @@ use crate::{
     rows::{sync_rows, write_rows},
     store::{
         AUTHENTICATED_STATE_KEY, BASE_KEY, COMMITMENT_POLICY_KEY, CURRENT_KEY, LmdbTailStateStore,
-        PROTOCOL_CONFIG_DIGEST_KEY, REGISTRY_AUTHORITY_KEY, validate_next,
+        PROTOCOL_CONFIG_DIGEST_KEY, REGISTRY_AUTHORITY_KEY, STATE_IMAGE_KIND_KEY, StateImageKind,
+        validate_next,
     },
 };
 
@@ -106,6 +107,11 @@ impl LmdbTailStateStore {
             PROTOCOL_CONFIG_DIGEST_KEY,
             config.protocol_digest().as_bytes().as_slice(),
         )?;
+        self.metadata.put(
+            &mut transaction,
+            STATE_IMAGE_KIND_KEY,
+            StateImageKind::LedgerV1.encoded(),
+        )?;
         transaction.commit()?;
         Ok(())
     }
@@ -136,13 +142,46 @@ impl LmdbTailStateStore {
             .map_err(|_| LmdbStateStoreError::InvalidLedgerState)?;
         let rows = LedgerStateRows::from_snapshot(&snapshot)
             .map_err(|_| LmdbStateStoreError::InvalidLedgerState)?;
-        self.commit_verified_internal(verified, Some(&rows))
+        self.commit_verified_internal(verified, Some(&rows), Some(StateImageKind::LedgerV1))
+    }
+
+    /// Atomically publishes a canonical state image whose ledger component was
+    /// independently decoded and cross-validated by a higher-level runtime.
+    ///
+    /// This is the persistence boundary for combined consensus states such as
+    /// the external-asset settlement state. The complete image remains the
+    /// canonical commitment, while normalized ledger rows are updated for
+    /// account reads and authenticated-history continuity. Authenticated-only
+    /// commitments are rejected because they would omit the additional state.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a non-canonical commitment policy, wrong-network or
+    /// invalid ledger snapshot, root mismatch, stale block or storage failure.
+    pub fn commit_verified_with_ledger_snapshot(
+        &self,
+        verified: &VerifiedTailBlock,
+        snapshot: &LedgerSnapshot,
+    ) -> Result<CommitOutcome, LmdbStateStoreError> {
+        if self
+            .commitment_policy
+            .scheme_at(verified.checkpoint().height)
+            != StateCommitmentScheme::CanonicalStateV1
+            || state_root(verified.state()) != verified.checkpoint().state_root
+            || snapshot.network != self.network
+        {
+            return Err(LmdbStateStoreError::InvalidLedgerState);
+        }
+        let rows = LedgerStateRows::from_snapshot(snapshot)
+            .map_err(|_| LmdbStateStoreError::InvalidLedgerState)?;
+        self.commit_verified_internal(verified, Some(&rows), Some(StateImageKind::CompositeV1))
     }
 
     pub(crate) fn commit_verified_internal(
         &self,
         verified: &VerifiedTailBlock,
         ledger_rows: Option<&LedgerStateRows>,
+        state_image_kind: Option<StateImageKind>,
     ) -> Result<CommitOutcome, LmdbStateStoreError> {
         if verified.network() != self.network {
             return Err(LmdbStateStoreError::WrongNetwork);
@@ -162,28 +201,17 @@ impl LmdbTailStateStore {
         }
         let current = self.read_current(&transaction)?;
 
+        self.require_state_image_transition(&transaction, state_image_kind)?;
+
         if current == requested.checkpoint {
-            let existing = self
-                .blocks
-                .get(&transaction, block_key.as_slice())?
-                .ok_or(LmdbStateStoreError::ConflictingBlock)?;
-            if decode_block(existing)? != requested {
-                return Err(LmdbStateStoreError::ConflictingBlock);
-            }
-            if self
-                .block_payloads
-                .get(&transaction, block_key.as_slice())?
-                != Some(verified.payload())
-            {
-                return Err(LmdbStateStoreError::ConflictingBlock);
-            }
-            self.require_same_state(&transaction, requested.checkpoint, &encoded_state)?;
-            if let Some(expected) = ledger_rows {
-                if self.read_ledger_rows(&transaction)? != *expected {
-                    return Err(LmdbStateStoreError::ConflictingBlock);
-                }
-                self.require_authenticated_state(&transaction, requested.checkpoint.height)?;
-            }
+            self.require_existing_commit(
+                &transaction,
+                &requested,
+                verified,
+                &encoded_state,
+                ledger_rows,
+                state_image_kind,
+            )?;
             return Ok(CommitOutcome::ExistingSame);
         }
         validate_next(current, &requested)?;
@@ -241,8 +269,74 @@ impl LmdbTailStateStore {
         let encoded_current = encode_current(requested.checkpoint);
         self.metadata
             .put(&mut transaction, CURRENT_KEY, encoded_current.as_slice())?;
+        if let Some(kind) = state_image_kind {
+            self.metadata
+                .put(&mut transaction, STATE_IMAGE_KIND_KEY, kind.encoded())?;
+        }
         transaction.commit()?;
         Ok(CommitOutcome::Committed)
+    }
+
+    fn require_state_image_transition(
+        &self,
+        transaction: &heed::RoTxn<'_>,
+        requested: Option<StateImageKind>,
+    ) -> Result<(), LmdbStateStoreError> {
+        let Some(requested) = requested else {
+            return Ok(());
+        };
+        let stored = self
+            .metadata
+            .get(transaction, STATE_IMAGE_KIND_KEY)?
+            .map(StateImageKind::decode)
+            .transpose()?
+            .unwrap_or(StateImageKind::LedgerV1);
+        if stored == StateImageKind::CompositeV1 && requested != StateImageKind::CompositeV1 {
+            Err(LmdbStateStoreError::InvalidLedgerState)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn require_existing_commit(
+        &self,
+        transaction: &heed::RoTxn<'_>,
+        requested: &BlockRecord,
+        verified: &VerifiedTailBlock,
+        encoded_state: &[u8],
+        ledger_rows: Option<&LedgerStateRows>,
+        state_image_kind: Option<StateImageKind>,
+    ) -> Result<(), LmdbStateStoreError> {
+        let block_key = requested.checkpoint.height.to_be_bytes();
+        let existing = self
+            .blocks
+            .get(transaction, block_key.as_slice())?
+            .ok_or(LmdbStateStoreError::ConflictingBlock)?;
+        if decode_block(existing)? != *requested
+            || self.block_payloads.get(transaction, block_key.as_slice())?
+                != Some(verified.payload())
+        {
+            return Err(LmdbStateStoreError::ConflictingBlock);
+        }
+        self.require_same_state(transaction, requested.checkpoint, encoded_state)?;
+        if let Some(expected) = ledger_rows {
+            if self.read_ledger_rows(transaction)? != *expected {
+                return Err(LmdbStateStoreError::ConflictingBlock);
+            }
+            self.require_authenticated_state(transaction, requested.checkpoint.height)?;
+        }
+        if let Some(expected) = state_image_kind {
+            let actual = self
+                .metadata
+                .get(transaction, STATE_IMAGE_KIND_KEY)?
+                .map(StateImageKind::decode)
+                .transpose()?
+                .unwrap_or(StateImageKind::LedgerV1);
+            if actual != expected {
+                return Err(LmdbStateStoreError::ConflictingBlock);
+            }
+        }
+        Ok(())
     }
 
     fn prepare_authenticated_transition(

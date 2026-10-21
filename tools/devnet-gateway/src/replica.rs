@@ -3,13 +3,14 @@ use std::time::Duration;
 use reqwest::{Client, Url, redirect::Policy};
 use serde::de::DeserializeOwned;
 
-use crate::{AppState, DevnetError, SyncBlockView, SyncBootstrapView};
+use crate::{AppState, DevnetError, SyncBlockView, SyncBootstrapView, install_tls_provider};
 
 const MAX_BOOTSTRAP_BYTES: usize = 16 * 1024;
 const MAX_BLOCK_BYTES: usize = 9 * 1024 * 1024;
 
 pub(crate) async fn run(state: AppState, upstream: String) -> Result<(), DevnetError> {
     let origin = parse_origin(&upstream)?;
+    install_tls_provider();
     let client = Client::builder()
         .connect_timeout(Duration::from_secs(2))
         .timeout(Duration::from_secs(5))

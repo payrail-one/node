@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodically settle finalized Ethereum deposits into Payrail
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=15s
+AccuracySec=1s
+Persistent=true
+Unit=payrail-ethereum-bridge-settler.service
+
+[Install]
+WantedBy=timers.target

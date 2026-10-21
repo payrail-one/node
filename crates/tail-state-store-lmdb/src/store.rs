@@ -24,7 +24,34 @@ pub(crate) const REGISTRY_AUTHORITY_KEY: &[u8] = b"ledger-registry-authority";
 pub(crate) const AUTHENTICATED_STATE_KEY: &[u8] = b"authenticated-state";
 pub(crate) const COMMITMENT_POLICY_KEY: &[u8] = b"state-commitment-policy";
 pub(crate) const PROTOCOL_CONFIG_DIGEST_KEY: &[u8] = b"protocol-config-digest";
+pub(crate) const STATE_IMAGE_KIND_KEY: &[u8] = b"state-image-kind";
 const MAX_DATABASES: u32 = 18;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum StateImageKind {
+    LedgerV1,
+    CompositeV1,
+}
+
+impl StateImageKind {
+    const LEDGER_V1: &'static [u8] = b"ledger-v1";
+    const COMPOSITE_V1: &'static [u8] = b"composite-v1";
+
+    pub(crate) const fn encoded(self) -> &'static [u8] {
+        match self {
+            Self::LedgerV1 => Self::LEDGER_V1,
+            Self::CompositeV1 => Self::COMPOSITE_V1,
+        }
+    }
+
+    pub(crate) fn decode(value: &[u8]) -> Result<Self, LmdbStateStoreError> {
+        match value {
+            Self::LEDGER_V1 => Ok(Self::LedgerV1),
+            Self::COMPOSITE_V1 => Ok(Self::CompositeV1),
+            _ => Err(LmdbStateStoreError::CorruptRecord),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct LmdbTailStateStore {
@@ -300,7 +327,7 @@ impl LmdbTailStateStore {
         &self,
         verified: &VerifiedTailBlock,
     ) -> Result<CommitOutcome, LmdbStateStoreError> {
-        self.commit_verified_internal(verified, None)
+        self.commit_verified_internal(verified, None, None)
     }
 
     pub(crate) fn read_current(

@@ -416,6 +416,10 @@ dependencies = [
  "consensus-signer-core",
  "consensus-signer-journal-fs",
  "ed25519-dalek",
+ "ethereum-bridge-core",
+ "external-asset-core",
+ "external-asset-runtime-core",
+ "external-asset-settlement-core",
  "finality-auth-ed25519",
  "finality-proof-core",
  "hmac",
@@ -431,8 +435,8 @@ dependencies = [
  "payment-rate-limit-lmdb",
  "receipt-index-core",
  "receipt-index-lmdb",
- "receipt-rebuild-core",
  "reqwest",
+ "rustls",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -534,6 +538,86 @@ checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "ethereum-bridge-core"
+version = "0.0.0"
+dependencies = [
+ "external-asset-core",
+ "ledger-core",
+ "sha2 0.11.0",
+]
+
+[[package]]
+name = "ethereum-bridge-observer"
+version = "0.0.0"
+dependencies = [
+ "ed25519-dalek",
+ "ethereum-bridge-core",
+ "ethereum-bridge-observer-lmdb",
+ "ethereum-bridge-rpc",
+ "external-asset-core",
+ "external-asset-runtime-core",
+ "ledger-core",
+ "reqwest",
+ "rustls",
+ "serde",
+ "sha2 0.11.0",
+]
+
+[[package]]
+name = "ethereum-bridge-observer-lmdb"
+version = "0.0.0"
+dependencies = [
+ "ethereum-bridge-core",
+ "external-asset-core",
+ "heed",
+ "ledger-core",
+ "sha2 0.11.0",
+]
+
+[[package]]
+name = "ethereum-bridge-rpc"
+version = "0.0.0"
+dependencies = [
+ "ethereum-bridge-core",
+ "reqwest",
+ "rustls",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "external-asset-core"
+version = "0.0.0"
+dependencies = [
+ "ledger-core",
+ "sha2 0.11.0",
+]
+
+[[package]]
+name = "external-asset-runtime-core"
+version = "0.0.0"
+dependencies = [
+ "ed25519-dalek",
+ "external-asset-core",
+ "external-asset-settlement-core",
+ "ledger-core",
+ "ledger-runtime-core",
+ "state-sync-core",
+ "tail-sync-core",
+ "transaction-auth-ed25519",
+]
+
+[[package]]
+name = "external-asset-settlement-core"
+version = "0.0.0"
+dependencies = [
+ "ed25519-dalek",
+ "external-asset-core",
+ "ledger-core",
+ "transaction-auth-ed25519",
 ]
 
 [[package]]

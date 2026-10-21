@@ -6,7 +6,7 @@ use std::{
 
 use ed25519_dalek::{Signer, SigningKey};
 use ledger_core::{LedgerSnapshot, NetworkId};
-use ledger_runtime_core::{LedgerBlockExecutor, StateCommitmentPolicy};
+use ledger_runtime_core::StateCommitmentPolicy;
 use merchant_checkout_core::{Checkout, CheckoutDefinition, CheckoutError, CheckoutId};
 use merchant_checkout_lmdb::{
     LmdbMerchantCheckoutStore, MerchantCheckoutStoreError, MerchantCheckoutStoreOptions,
@@ -16,16 +16,16 @@ use network_config_core::{
     ConfigurationPublicKey, ConfigurationSignature, NetworkConfig, SignedNetworkConfig,
     VerifiedNetworkConfig,
 };
-use receipt_index_core::{FinalizedReceiptBlock, ReceiptIndexWriteOutcome};
+use receipt_index_core::{
+    FinalizedReceiptBlock, ReceiptIndexBase, ReceiptIndexStore, ReceiptIndexWriteOutcome,
+};
 use receipt_index_lmdb::{LmdbReceiptIndex, ReceiptIndexStoreOptions};
-use receipt_rebuild_core::rebuild_receipt_index;
 use state_sync_core::{FinalizedCheckpoint, ManifestId, SyncCompletion};
 use tail_state_store_lmdb::{
     CommitOutcome, LmdbStateStoreError, LmdbStoreOptions, LmdbTailStateStore, StoredFinalizedBlock,
     StoredTailState,
 };
 use tail_sync_core::VerifiedTailBlock;
-use transaction_auth_ed25519::Ed25519Verifier;
 
 use crate::{DevnetError, checkout::DEVNET_TENANT};
 
@@ -53,7 +53,6 @@ impl DevnetPersistence {
         network: NetworkId,
         genesis: FinalizedCheckpoint,
         snapshot: &LedgerSnapshot,
-        executor: &LedgerBlockExecutor<Ed25519Verifier>,
     ) -> Result<Self, DevnetError> {
         let root = prepare_root(root.as_ref())?;
         let proofs = prepare_root(&root.join("proofs"))?;
@@ -67,7 +66,7 @@ impl DevnetPersistence {
             config,
         )
         .map_err(map_store_error)?;
-        match ledger.current_ledger() {
+        match ledger.current() {
             Ok(_) => {}
             Err(LmdbStateStoreError::NotInitialized) => ledger
                 .initialize_ledger_from_snapshot(
@@ -98,14 +97,24 @@ impl DevnetPersistence {
             },
         )
         .map_err(map_checkout_error)?;
-        let persistence = Self {
+        if ReceiptIndexStore::cursor(&receipts)
+            .map_err(|_| DevnetError::StateUnavailable)?
+            .is_none()
+        {
+            receipts
+                .initialize(ReceiptIndexBase {
+                    network,
+                    checkpoint: genesis,
+                    next_operation_index: snapshot.next_operation_index,
+                })
+                .map_err(|_| DevnetError::StateUnavailable)?;
+        }
+        Ok(Self {
             ledger,
             receipts,
             checkouts,
             proofs,
-        };
-        persistence.rebuild_receipts(executor)?;
-        Ok(persistence)
+        })
     }
 
     pub fn current(&self) -> Result<StoredTailState, DevnetError> {
@@ -118,6 +127,23 @@ impl DevnetPersistence {
 
     pub fn finalized_block(&self, height: u64) -> Result<StoredFinalizedBlock, DevnetError> {
         self.ledger.finalized_block(height).map_err(map_store_error)
+    }
+
+    pub fn commit_settlement(
+        &self,
+        block: &VerifiedTailBlock,
+        ledger: &LedgerSnapshot,
+        finality_proof: &[u8],
+    ) -> Result<(), DevnetError> {
+        self.store_proof(block.checkpoint().height, finality_proof)?;
+        match self
+            .ledger
+            .commit_verified_with_ledger_snapshot(block, ledger)
+            .map_err(map_store_error)?
+        {
+            CommitOutcome::Committed => Ok(()),
+            CommitOutcome::ExistingSame => Err(DevnetError::InternalInvariant),
+        }
     }
 
     pub fn commit_ledger(
@@ -161,15 +187,6 @@ impl DevnetPersistence {
         {
             ReceiptIndexWriteOutcome::Committed | ReceiptIndexWriteOutcome::ExistingSame => Ok(()),
         }
-    }
-
-    pub fn rebuild_receipts(
-        &self,
-        executor: &LedgerBlockExecutor<Ed25519Verifier>,
-    ) -> Result<(), DevnetError> {
-        rebuild_receipt_index(&self.ledger, &self.receipts, executor)
-            .map(|_| ())
-            .map_err(|_| DevnetError::StateUnavailable)
     }
 
     pub fn create_checkout(

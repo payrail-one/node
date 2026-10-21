@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "network": "sepolia",
+  "chainId": "11155111",
+  "contract": "PayrailBridgeVault",
+  "address": "0xc4f167f0df1E25c3B20cBf0f72f48A229aEa1A47",
+  "deploymentTransaction": "0x6975a657f3a7bee82e401c75e4e380091316389c7b3df75cb0a0056e20ac380c",
+  "deploymentBlock": "11962945",
+  "deploymentBlockHash": "0xf15285e4b7e163dd1333586d99291597cb1fd9775b5afa6b92ffa815c9f49263",
+  "deploymentBlockParentHash": "0x0110a200e7a117eb19aaa3c1b34a9622a0cfb4993fe6c4e571a997a1d13b0129",
+  "deployedAt": "2026-10-21T14:15:24.000Z",
+  "deployer": "0x1586eC91f476d14ae8D5Ac6e9B56785A2387571a",
+  "owner": "0xfbFDE4e3Ab7CfC4798B57450c8d426aD330F962b",
+  "releaseAuthority": "0x7E51e42a019f2f07E34F05B023805E16ac6B64cC",
+  "confirmations": 2,
+  "nativePayrailAssetId": "0xa145ec56fb0034aa0eb2cee09dc782d5c2e97517ff6a9219e7d3bff0aa7ee07d",
+  "artifact": {
+    "compilerVersion": "0.8.24",
+    "abiSha256": "2598fbaea45e8af84f3534da85dc9e622a7c20a9de14ad225e2166eb862b7638",
+    "creationBytecodeSha256": "eccb04840e95ac70b79c930bcce436a2e491b8a95879e81f8175dd722fee8b34",
+    "runtimeBytecodeSha256": "52cf3167c8fe98f0fe606be77e4b54726f10d6f77f1a25fe17d57916fd16939b"
+  },
+  "verification": {
+    "rpcQuorum": 2,
+    "runtimeCodeMatchesArtifact": true,
+    "ownerMatches": true,
+    "releaseAuthorityMatches": true,
+    "paused": false
+  }
+}

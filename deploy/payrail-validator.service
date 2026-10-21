@@ -1,0 +1,24 @@
+[Unit]
+Description=Payrail quorum validator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=payrail
+Group=payrail
+EnvironmentFile=/etc/payrail/validator.env
+ExecStart=/usr/local/bin/payrail-devnet-gateway
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=30
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/etc/payrail/validator-seed.bin
+ReadWritePaths=/var/lib/payrail-validator
+
+[Install]
+WantedBy=multi-user.target

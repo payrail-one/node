@@ -230,6 +230,7 @@ pub(crate) struct QuorumCoordinator {
 
 impl QuorumCoordinator {
     pub(crate) fn new(signer: QuorumSigner, endpoints: Vec<String>) -> Result<Self, DevnetError> {
+        crate::install_tls_provider();
         let client = Client::builder()
             .connect_timeout(REQUEST_TIMEOUT)
             .timeout(REQUEST_TIMEOUT)

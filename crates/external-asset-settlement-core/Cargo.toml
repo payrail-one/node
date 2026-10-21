@@ -1,0 +1,18 @@
+[package]
+name = "external-asset-settlement-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+external-asset-core = { path = "../external-asset-core" }
+ledger-core = { path = "../ledger-core" }
+
+[dev-dependencies]
+ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["zeroize"] }
+transaction-auth-ed25519 = { path = "../transaction-auth-ed25519" }
+
+[lints]
+workspace = true

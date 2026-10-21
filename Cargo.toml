@@ -8,6 +8,12 @@ members = [
     "crates/checkout-approval-random",
     "crates/consensus-signer-core",
     "crates/consensus-signer-journal-fs",
+    "crates/ethereum-bridge-core",
+    "crates/ethereum-bridge-observer-lmdb",
+    "crates/ethereum-bridge-rpc",
+    "crates/external-asset-core",
+    "crates/external-asset-runtime-core",
+    "crates/external-asset-settlement-core",
     "crates/finality-auth-ed25519",
     "crates/finality-proof-core",
     "crates/ledger-core",
@@ -35,6 +41,7 @@ members = [
     "crates/transaction-protocol",
     "crates/transaction-verification-core",
     "tools/devnet-gateway",
+    "tools/ethereum-bridge-observer",
     "tools/payrail-node",
 ]
 resolver = "3"

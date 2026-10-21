@@ -1,0 +1,22 @@
+[package]
+name = "external-asset-runtime-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+external-asset-core = { path = "../external-asset-core" }
+external-asset-settlement-core = { path = "../external-asset-settlement-core" }
+ledger-core = { path = "../ledger-core" }
+ledger-runtime-core = { path = "../ledger-runtime-core" }
+state-sync-core = { path = "../state-sync-core" }
+tail-sync-core = { path = "../tail-sync-core" }
+
+[dev-dependencies]
+ed25519-dalek = { version = "=3.0.0", default-features = false, features = ["zeroize"] }
+transaction-auth-ed25519 = { path = "../transaction-auth-ed25519" }
+
+[lints]
+workspace = true

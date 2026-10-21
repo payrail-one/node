@@ -5,12 +5,15 @@ use std::{
 
 use account_address::AddressCodec;
 use ed25519_dalek::{Signer, SigningKey};
+use external_asset_runtime_core::{
+    ExternalSettlementBlockCodec, ExternalSettlementBlockExecutor, ExternalSettlementExecutionKind,
+};
 use ledger_core::{
     AccountId, AssetClass, AssetDefinition, AssetId, AssetStatus, Authorization, AuthorizationRole,
     AuthorizedOperation, BackingRequirement, IdempotencyKey, Ledger, NetworkId, SignatureBytes,
     SignedOperation, Transfer,
 };
-use ledger_runtime_core::{LedgerBlockCodec, LedgerBlockExecutor, LedgerStateCodec, state_root};
+use ledger_runtime_core::{LedgerBlockCodec, LedgerStateCodec, state_root};
 use merchant_checkout_core::CheckoutId;
 use receipt_index_core::FinalizedReceiptBlock;
 use state_sync_core::{BlockHash, FinalizedCheckpoint, StateRoot};
@@ -20,6 +23,7 @@ use transaction_protocol::{MAX_ENVELOPE_BYTES, SignedOperationCodec};
 
 use crate::{
     DevnetError,
+    bridge::{BRIDGE_ASSET, BRIDGE_DECIMALS, BRIDGE_SYMBOL, bridge_transaction_view},
     checkout::{create_definition, now_ms, parse_id, validate_payment, validate_transfer, view},
     codec::{decode_bounded_hex, encode_hex},
     contract_view::{contract_execution_view, contract_view, transaction_view},
@@ -31,6 +35,7 @@ use crate::{
     },
     persistence::DevnetPersistence,
     quorum::{FinalityPolicy, QuorumCoordinator, QuorumProposal},
+    recovery::rebuild_presentation,
     sync::{checkpoint_view, decode_block},
 };
 
@@ -44,17 +49,11 @@ const FAUCET_SUPPLY: u128 = 1_000_000_000_000_000;
 const RECENT_VALIDITY_WINDOW: u64 = 20;
 const DEVNET_FINALITY_PROOF: &[u8] = b"single-node-devnet-finality";
 
-type RebuiltPresentation = (
-    ExplorerIndex,
-    BTreeSet<AccountId>,
-    BTreeMap<CheckoutId, FinalizedTransactionView>,
-);
-
 pub struct DevnetService {
     address_codec: AddressCodec,
     faucet_key: SigningKey,
     faucet_account: AccountId,
-    executor: LedgerBlockExecutor<Ed25519Verifier>,
+    executor: ExternalSettlementBlockExecutor<Ed25519Verifier>,
     persistence: DevnetPersistence,
     state: Vec<u8>,
     checkpoint: FinalizedCheckpoint,
@@ -134,11 +133,14 @@ impl DevnetService {
         };
         let address_codec = AddressCodec::new(NETWORK, ADDRESS_PREFIX)
             .map_err(|_| DevnetError::InternalInvariant)?;
-        let executor = LedgerBlockExecutor::new(NETWORK, Ed25519Verifier);
-        let persistence = DevnetPersistence::open(path, NETWORK, genesis, &snapshot, &executor)?;
+        let executor =
+            ExternalSettlementBlockExecutor::new(crate::bridge::runtime_config()?, Ed25519Verifier);
+        let persistence = DevnetPersistence::open(path, NETWORK, genesis, &snapshot)
+            .inspect_err(|error| eprintln!("devnet persistence open failed: {error:?}"))?;
         let current = persistence.current()?;
         let (index, funded, settled_checkouts) =
-            rebuild_presentation(&persistence, &executor, &address_codec, faucet_account)?;
+            rebuild_presentation(&persistence, &executor, &address_codec, faucet_account)
+                .inspect_err(|error| eprintln!("devnet presentation rebuild failed: {error:?}"))?;
         Ok(Self {
             address_codec,
             faucet_key,
@@ -173,6 +175,11 @@ impl DevnetService {
                 symbol: SYMBOL.to_owned(),
                 decimals: DECIMALS,
             },
+            bridge_asset: NetworkAssetView {
+                id: encode_hex(BRIDGE_ASSET.as_bytes()),
+                symbol: BRIDGE_SYMBOL.to_owned(),
+                decimals: BRIDGE_DECIMALS,
+            },
         }
     }
 
@@ -192,6 +199,26 @@ impl DevnetService {
             account_id: encode_hex(decoded.account.as_bytes()),
             nonce: ledger.nonce(decoded.account).to_string(),
             balance: ledger.balance(ASSET, decoded.account).to_string(),
+            finalized_height: self.checkpoint.height.to_string(),
+        })
+    }
+
+    /// Reads the finalized test-USDT representation balance for one account.
+    ///
+    /// # Errors
+    ///
+    /// Rejects malformed or foreign-network addresses and unavailable state.
+    pub fn bridge_account(&self, address: &str) -> Result<AccountStateView, DevnetError> {
+        let decoded = self
+            .address_codec
+            .decode(address)
+            .map_err(|_| DevnetError::InvalidAddress)?;
+        let ledger = self.ledger()?;
+        Ok(AccountStateView {
+            address: address.to_owned(),
+            account_id: encode_hex(decoded.account.as_bytes()),
+            nonce: ledger.nonce(decoded.account).to_string(),
+            balance: ledger.balance(BRIDGE_ASSET, decoded.account).to_string(),
             finalized_height: self.checkpoint.height.to_string(),
         })
     }
@@ -278,6 +305,21 @@ impl DevnetService {
     pub fn submit_hex(&mut self, envelope: &str) -> Result<SubmissionResultView, DevnetError> {
         let signed = decode_signed(envelope)?;
         self.finalize(&signed)
+    }
+
+    /// Verifies, finalizes and replicates one signed external-settlement operation.
+    ///
+    /// # Errors
+    ///
+    /// Rejects malformed payloads, wrong roles, invalid signatures, replays and
+    /// any backing or monetary invariant failure.
+    pub fn submit_bridge_hex(
+        &mut self,
+        payload: &str,
+    ) -> Result<SubmissionResultView, DevnetError> {
+        let payload = decode_bounded_hex(payload, tail_sync_core::MAX_TAIL_PAYLOAD_BYTES)?;
+        ExternalSettlementBlockCodec::decode(&payload).map_err(|_| DevnetError::InvalidEnvelope)?;
+        self.finalize_payload(&payload)
     }
 
     /// Creates an immutable fixed-amount development checkout.
@@ -467,10 +509,17 @@ impl DevnetService {
         }
         let payload = LedgerBlockCodec::encode(std::slice::from_ref(signed))
             .map_err(|_| DevnetError::InvalidEnvelope)?;
+        self.finalize_payload(&payload)
+    }
+
+    fn finalize_payload(&mut self, payload: &[u8]) -> Result<SubmissionResultView, DevnetError> {
         let executed = self
             .executor
-            .execute(self.checkpoint, &self.state, &payload)
-            .map_err(|_| DevnetError::InvalidTransaction)?;
+            .execute(self.checkpoint, &self.state, payload)
+            .map_err(|error| {
+                eprintln!("devnet bridge/ledger execution rejected: {error:?}");
+                DevnetError::InvalidTransaction
+            })?;
         let parent = self.checkpoint;
         let checkpoint = FinalizedCheckpoint {
             height: self
@@ -483,7 +532,7 @@ impl DevnetService {
             validator_set_hash: self.checkpoint.validator_set_hash,
         };
         let finality_proof = match self.coordinator.as_mut() {
-            Some(coordinator) => coordinator.certify(parent, checkpoint, &payload)?,
+            Some(coordinator) => coordinator.certify(parent, checkpoint, payload)?,
             None if matches!(self.finality, FinalityPolicy::Single) => {
                 DEVNET_FINALITY_PROOF.to_vec()
             }
@@ -493,7 +542,7 @@ impl DevnetService {
             network: NETWORK,
             parent_hash: parent.block_hash,
             checkpoint,
-            payload: payload.clone(),
+            payload: payload.to_vec(),
             finality_proof: finality_proof.clone(),
         };
         let result = self.commit_finalized(finalized)?;
@@ -502,7 +551,7 @@ impl DevnetService {
                 network_id: encode_hex(NETWORK.as_bytes()),
                 parent: checkpoint_view(parent),
                 checkpoint: checkpoint_view(checkpoint),
-                payload: encode_hex(&payload),
+                payload: encode_hex(payload),
                 finality_proof: encode_hex(&finality_proof),
             });
         }
@@ -523,18 +572,34 @@ impl DevnetService {
                     .map(|executed| (executed.transition.clone(), executed))
             })
             .map_err(|_| DevnetError::InvalidSyncBlock)?;
-        let operations = LedgerBlockCodec::decode(verified.payload())
-            .map_err(|_| DevnetError::InvalidSyncBlock)?;
-        let [signed] = operations.as_slice() else {
-            return Err(DevnetError::InvalidSyncBlock);
-        };
-        let [receipt] = executed.receipts.as_slice() else {
-            return Err(DevnetError::InternalInvariant);
-        };
         let checkpoint = verified.checkpoint();
-        let transaction =
-            transaction_view(&self.address_codec, &signed.operation, *receipt, checkpoint)?;
-        let contract = contract_execution_view(&signed.operation, &executed.events);
+        let settlement = self
+            .executor
+            .settlement_state(verified.state())
+            .map_err(|_| DevnetError::InvalidSyncBlock)?;
+        let (transaction, contract, transfer) = match &executed.kind {
+            ExternalSettlementExecutionKind::Ledger(operations) => {
+                let [signed] = operations.as_slice() else {
+                    return Err(DevnetError::InvalidSyncBlock);
+                };
+                let [receipt] = executed.receipts.as_slice() else {
+                    return Err(DevnetError::InternalInvariant);
+                };
+                (
+                    transaction_view(&self.address_codec, &signed.operation, *receipt, checkpoint)?,
+                    contract_execution_view(&signed.operation, &executed.events),
+                    match signed.operation {
+                        AuthorizedOperation::Transfer(transfer) => Some(transfer),
+                        _ => None,
+                    },
+                )
+            }
+            kind => (
+                bridge_transaction_view(&self.address_codec, checkpoint, kind, &settlement)?,
+                None,
+                None,
+            ),
+        };
         let block = block_view(checkpoint, 1);
         let prepared =
             self.index
@@ -545,14 +610,17 @@ impl DevnetService {
             checkpoint,
             receipts: executed.receipts,
         };
-        self.persistence.commit_ledger(&verified, &proof)?;
+        if checkpoint.height < self.executor.config().activation_height {
+            self.persistence.commit_ledger(&verified, &proof)?;
+        } else {
+            self.persistence
+                .commit_settlement(&verified, &settlement.snapshot().ledger, &proof)?;
+        }
         self.state = verified.state().to_vec();
         self.checkpoint = checkpoint;
-        if self.persistence.commit_receipts(&receipt_block).is_err() {
-            self.persistence.rebuild_receipts(&self.executor)?;
-        }
+        self.persistence.commit_receipts(&receipt_block)?;
         self.index.commit(prepared)?;
-        if let AuthorizedOperation::Transfer(transfer) = signed.operation {
+        if let Some(transfer) = transfer {
             self.record_checkout_settlement(transfer, transaction.clone())?;
         }
         Ok(SubmissionResultView {
@@ -563,9 +631,10 @@ impl DevnetService {
     }
 
     fn ledger(&self) -> Result<Ledger, DevnetError> {
-        let snapshot = LedgerStateCodec::decode(NETWORK, &self.state)
-            .map_err(|_| DevnetError::StateUnavailable)?;
-        Ledger::from_snapshot(NETWORK, snapshot).map_err(|_| DevnetError::StateUnavailable)
+        self.executor
+            .settlement_state(&self.state)
+            .map(|settlement| settlement.into_parts().0)
+            .map_err(|_| DevnetError::StateUnavailable)
     }
 
     fn checkout_view(
@@ -598,77 +667,15 @@ impl DevnetService {
     }
 }
 
-fn rebuild_presentation(
-    persistence: &DevnetPersistence,
-    executor: &LedgerBlockExecutor<Ed25519Verifier>,
-    addresses: &AddressCodec,
-    faucet: AccountId,
-) -> Result<RebuiltPresentation, DevnetError> {
-    let base = persistence.recovery_base()?;
-    let latest = persistence.current()?;
-    let mut previous = base.checkpoint;
-    let mut state = base.state;
-    let mut index = ExplorerIndex::new(previous, block_view(previous, 0));
-    let mut funded = BTreeSet::new();
-    let mut settled_checkouts = BTreeMap::new();
-    while previous.height < latest.checkpoint.height {
-        let height = previous
-            .height
-            .checked_add(1)
-            .ok_or(DevnetError::InternalInvariant)?;
-        let archived = persistence.finalized_block(height)?;
-        if archived.previous != previous || archived.checkpoint.height != height {
-            return Err(DevnetError::InternalInvariant);
-        }
-        let executed = executor
-            .execute(previous, &state, &archived.payload)
-            .map_err(|_| DevnetError::InternalInvariant)?;
-        if executed.transition.commitment.block_hash != archived.checkpoint.block_hash
-            || executed.transition.commitment.state_root != archived.checkpoint.state_root
-        {
-            return Err(DevnetError::InternalInvariant);
-        }
-        let operations = LedgerBlockCodec::decode(&archived.payload)
-            .map_err(|_| DevnetError::InternalInvariant)?;
-        let [signed] = operations.as_slice() else {
-            return Err(DevnetError::InternalInvariant);
-        };
-        let [receipt] = executed.receipts.as_slice() else {
-            return Err(DevnetError::InternalInvariant);
-        };
-        if let AuthorizedOperation::Transfer(transfer) = signed.operation
-            && transfer.from == faucet
-        {
-            funded.insert(transfer.to);
-        }
-        let transaction =
-            transaction_view(addresses, &signed.operation, *receipt, archived.checkpoint)?;
-        if let AuthorizedOperation::Transfer(transfer) = signed.operation {
-            let checkout_id = CheckoutId::new(*transfer.idempotency_key.as_bytes());
-            if let Some(checkout) = persistence.find_checkout(checkout_id)?
-                && validate_transfer(&checkout, transfer).is_ok()
-            {
-                settled_checkouts.insert(checkout_id, transaction.clone());
-            }
-        }
-        let block = block_view(archived.checkpoint, 1);
-        let prepared = index.prepare_append(previous, archived.checkpoint, block, transaction)?;
-        index.commit(prepared)?;
-        state = executed.transition.state;
-        previous = archived.checkpoint;
-    }
-    if previous != latest.checkpoint || state != latest.state {
-        return Err(DevnetError::InternalInvariant);
-    }
-    Ok((index, funded, settled_checkouts))
-}
-
 fn decode_signed(envelope: &str) -> Result<SignedOperation, DevnetError> {
     let bytes = decode_bounded_hex(envelope, MAX_ENVELOPE_BYTES)?;
     SignedOperationCodec::decode(&bytes).map_err(|_| DevnetError::InvalidEnvelope)
 }
 
-fn block_view(checkpoint: FinalizedCheckpoint, transaction_count: usize) -> FinalizedBlockView {
+pub(crate) fn block_view(
+    checkpoint: FinalizedCheckpoint,
+    transaction_count: usize,
+) -> FinalizedBlockView {
     FinalizedBlockView {
         height: checkpoint.height.to_string(),
         hash: encode_hex(checkpoint.block_hash.as_bytes()),
