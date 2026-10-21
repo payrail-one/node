@@ -1,0 +1,112 @@
+@media (max-width: 760px) {
+  main {
+    padding-top: 38px;
+  }
+
+  .auth-layout {
+    grid-template-columns: 1fr;
+  }
+
+  nav a {
+    display: none;
+  }
+
+  .wallet-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .wallet-toolbar {
+    align-items: flex-start;
+    flex-direction: column-reverse;
+    margin-bottom: 32px;
+  }
+
+  .wallet-tabs {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .wallet-tabs button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+
+  .wallet-grid,
+  .send-panel form,
+  .quick-actions,
+  .focused-layout,
+  .request-layout,
+  .channel-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .qr-card {
+    grid-row: auto;
+  }
+
+  .activity-head,
+  .activity-row {
+    grid-template-columns: 1.3fr 0.7fr 0.8fr;
+  }
+
+  .activity-head span:nth-child(3),
+  .activity-row span:nth-child(3) {
+    display: none;
+  }
+
+  .receipt {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .receipt code {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 430px) {
+  .controls {
+    padding: 26px 24px;
+  }
+
+  .account-panel .panel-title {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .address-row {
+    flex-direction: column;
+  }
+
+  .address-row button {
+    width: 100%;
+  }
+
+  .address-identity code,
+  .card-address code {
+    font-size: 10px;
+    line-height: 1.45;
+  }
+
+  .balance-card {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+
+  .card-foot {
+    right: 24px;
+    left: 24px;
+  }
+
+  .session-actions {
+    width: 100%;
+  }
+
+  .session-actions button {
+    flex: 1;
+  }
+}

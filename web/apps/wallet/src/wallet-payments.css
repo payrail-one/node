@@ -1,0 +1,276 @@
+.send-layout {
+  align-items: start;
+}
+
+.focused-copy .balance-card {
+  min-height: 315px;
+}
+
+.payment-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 30px;
+  padding: 0 0 22px;
+  border-bottom: 1px solid #ffffff10;
+  list-style: none;
+}
+
+.payment-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #536960;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.payment-steps li::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  min-width: 5px;
+  background: #ffffff10;
+}
+
+.payment-steps li:last-child::after {
+  display: none;
+}
+
+.payment-steps b {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #ffffff16;
+  border-radius: 50%;
+  font:
+    8px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+
+.payment-steps li[data-active='true'] {
+  color: #b8ccc4;
+}
+
+.payment-steps li[data-active='true'] b {
+  border-color: #72e6c047;
+  color: #062016;
+  background: #72e6c0;
+}
+
+.payment-steps li[data-active='true']::after {
+  background: linear-gradient(90deg, #72e6c070, #ffffff10);
+}
+
+.card-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.card-head-actions button {
+  padding: 4px 7px;
+  border: 1px solid #ffffff17;
+  border-radius: 999px;
+  color: #a5bbb2;
+  background: #071d17a8;
+  font:
+    8px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  text-transform: uppercase;
+}
+
+.card-head-actions button:hover {
+  border-color: #72e6c04a;
+  color: #72e6c0;
+}
+
+.amount-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: -7px;
+}
+
+.amount-presets button {
+  padding: 8px 10px;
+  border: 1px solid #ffffff13;
+  border-radius: 9px;
+  color: #9db1a8;
+  background: #10231d;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.amount-presets button:hover:not(:disabled) {
+  border-color: #72e6c04d;
+  color: #72e6c0;
+}
+
+.send-panel .payment-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px 16px;
+}
+
+.send-panel .payment-summary strong {
+  text-align: right;
+}
+
+.review-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.review-heading p {
+  margin: 0;
+}
+
+.review-heading > span {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 1px solid #e7c68726;
+  border-radius: 999px;
+  color: #e7c687;
+  background: #e7c6870b;
+  font:
+    8px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  text-transform: uppercase;
+}
+
+.transfer-review .recipient-review {
+  grid-template-columns: 1fr;
+}
+
+.transfer-review .recipient-review dd {
+  overflow: visible;
+  color: #c6dbd2;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  text-align: left;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.transfer-review > p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.receipt > i {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  color: #062016;
+  background: #72e6c0;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.receipt > span strong,
+.receipt > span small {
+  display: block;
+}
+
+.channel-preview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 34px;
+}
+
+.channel-preview > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #ffffff13;
+  border-radius: 14px;
+  background: #0b19189e;
+}
+
+.channel-preview i {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  color: #72e6c0;
+  background: #72e6c00d;
+  font:
+    9px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+
+.channel-preview span,
+.channel-preview strong,
+.channel-preview small {
+  display: block;
+  min-width: 0;
+}
+
+.channel-preview strong {
+  color: #c8dad3;
+  font-size: 10px;
+}
+
+.channel-preview small {
+  margin-top: 4px;
+  color: #60766d;
+  font-size: 8px;
+}
+
+.receipt > span small {
+  margin-top: 3px;
+  color: #6f857c;
+  font-size: 9px;
+}
+
+@media (max-width: 760px) {
+  .focused-copy .balance-card {
+    min-height: 330px;
+  }
+
+  .send-panel {
+    padding: 26px;
+  }
+
+  .channel-preview {
+    grid-template-columns: 1fr;
+    margin-top: 28px;
+  }
+}
+
+@media (max-width: 430px) {
+  .payment-steps span {
+    display: none;
+  }
+
+  .payment-steps li {
+    gap: 5px;
+  }
+
+  .transfer-review .button-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

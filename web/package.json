@@ -4,10 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "workspaces": [
+    "apps/wallet",
     "apps/node",
+    "packages/api-client",
+    "packages/money",
+    "packages/wallet-core",
     "packages/ui-kit"
   ],
   "scripts": {
+    "dev:wallet": "npm --workspace @platform/payrail-wallet run dev",
+    "deploy:wallet": "npm --workspace @platform/payrail-wallet run deploy",
     "check": "npm run check --workspaces --if-present",
     "build": "npm run build --workspace @platform/payrail-public-node",
     "deploy": "npm run deploy --workspace @platform/payrail-public-node",

@@ -1,0 +1,83 @@
+.phone-link-layout {
+  width: min(760px, calc(100% - 2rem));
+  margin: 5rem auto;
+}
+.phone-link-card {
+  padding: clamp(1.5rem, 5vw, 3.5rem);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background:
+    radial-gradient(
+      circle at 90% 0%,
+      rgb(117 242 181 / 13%),
+      transparent 18rem
+    ),
+    var(--panel);
+  box-shadow: 0 32px 90px rgb(0 0 0 / 32%);
+}
+.phone-link-card h1 {
+  margin: 0.8rem 0 1rem;
+  font-size: clamp(2.6rem, 7vw, 5rem);
+  line-height: 0.94;
+  letter-spacing: -0.07em;
+}
+.phone-link-card h1 em {
+  color: var(--accent);
+  font-style: normal;
+}
+.phone-link-summary {
+  max-width: 580px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.phone-link-card dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin: 2rem 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--line);
+}
+.phone-link-card dl div {
+  min-width: 0;
+  padding: 1rem;
+  background: rgb(8 14 13 / 96%);
+}
+.phone-link-card dt {
+  margin-bottom: 0.45rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.phone-link-card dd {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--mono);
+  text-overflow: ellipsis;
+}
+.phone-link-warning {
+  padding: 1rem;
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+  background: rgb(117 242 181 / 6%);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+.phone-link-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+@media (max-width: 600px) {
+  .phone-link-layout {
+    margin: 2rem auto;
+  }
+  .phone-link-card dl {
+    grid-template-columns: 1fr;
+  }
+  .phone-link-actions {
+    flex-direction: column-reverse;
+  }
+}

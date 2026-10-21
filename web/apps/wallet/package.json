@@ -1,0 +1,28 @@
+{
+  "name": "@platform/payrail-wallet",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "check": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "build": "vite build",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "@platform/api-client": "0.0.0",
+    "@platform/money": "0.0.0",
+    "@platform/ui-kit": "0.0.0",
+    "@platform/wallet-core": "0.0.0",
+    "uqr": "0.1.3",
+    "workstar": "0.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.2",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vite": "8.0.16",
+    "wrangler": "4.147.0"
+  }
+}

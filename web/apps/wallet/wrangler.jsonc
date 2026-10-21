@@ -1,0 +1,15 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "payrail-wallet",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-03",
+  "routes": [
+    {
+      "pattern": "wallet.payrail.one",
+      "custom_domain": true,
+    },
+  ],
+  "observability": {
+    "enabled": true,
+  },
+}

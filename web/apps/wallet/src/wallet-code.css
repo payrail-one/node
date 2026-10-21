@@ -1,0 +1,146 @@
+.code-layout {
+  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+}
+.code-intro,
+.payrail-code-card {
+  min-height: 500px;
+  border: 1px solid #ffffff16;
+  border-radius: 24px;
+}
+.code-intro {
+  padding: 54px;
+  background:
+    radial-gradient(circle at 85% 12%, #75e8bf1c, transparent 30%), #091615;
+}
+.code-intro h1 {
+  max-width: 540px;
+  margin: 18px 0;
+  font-size: clamp(42px, 6vw, 76px);
+  font-weight: 430;
+  line-height: 0.94;
+  letter-spacing: -0.065em;
+}
+.code-intro > p {
+  max-width: 490px;
+  color: #8ca299;
+  line-height: 1.75;
+}
+.code-intro ul {
+  display: grid;
+  gap: 12px;
+  margin: 38px 0 0;
+  padding: 0;
+  color: #bed0ca;
+  font-size: 12px;
+  list-style: none;
+}
+.code-intro li::before {
+  margin-right: 10px;
+  color: #72e6c0;
+  content: '✓';
+}
+.payrail-code-card {
+  display: grid;
+  place-items: center;
+  padding: 44px;
+  color: #07130f;
+  background: #9ff8ce;
+}
+.code-empty,
+.code-active {
+  width: min(100%, 560px);
+  text-align: center;
+}
+.code-mark {
+  display: grid;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 26px;
+  place-items: center;
+  border: 10px solid currentColor;
+  border-radius: 50%;
+  font-size: 32px;
+  font-weight: 800;
+}
+.code-empty h2 {
+  margin: 0;
+  font-size: 34px;
+}
+.code-empty p,
+.code-active p {
+  margin: 14px auto 28px;
+  color: #315644;
+  line-height: 1.65;
+}
+.code-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font:
+    700 10px ui-monospace,
+    monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.code-status i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #087342;
+  box-shadow: 0 0 0 7px #08734218;
+  animation: code-pulse 1.4s infinite;
+}
+.code-digits {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 9px;
+  margin: 30px 0 22px;
+}
+.code-digits b {
+  display: grid;
+  min-width: 0;
+  aspect-ratio: 0.8;
+  place-items: center;
+  border: 1px solid #0826192c;
+  border-radius: 14px;
+  background: #effff6a6;
+  font-size: clamp(28px, 4.5vw, 52px);
+  font-weight: 520;
+  box-shadow: 0 12px 30px #174a3020;
+}
+.code-expiry {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 12px;
+}
+.code-expiry strong {
+  font:
+    750 18px ui-monospace,
+    monospace;
+}
+.code-active .button-row {
+  justify-content: center;
+}
+@keyframes code-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+@media (max-width: 760px) {
+  .code-layout {
+    grid-template-columns: 1fr;
+  }
+  .code-intro,
+  .payrail-code-card {
+    min-height: auto;
+    padding: 32px 24px;
+  }
+  .code-digits {
+    gap: 5px;
+  }
+  .code-digits b {
+    border-radius: 10px;
+  }
+}

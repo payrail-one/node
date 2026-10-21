@@ -1,0 +1,126 @@
+.restore-vault {
+  display: grid;
+  margin-top: 18px;
+  padding: 13px;
+  border: 1px dashed #ffffff24;
+  border-radius: 12px;
+  color: #8ca298;
+  cursor: pointer;
+  text-align: center;
+}
+
+.restore-intro {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.restore-intro span {
+  height: 1px;
+  flex: 1;
+  background: #ffffff12;
+}
+
+.restore-intro small {
+  color: #657a71;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.restore-vault strong,
+.restore-vault small {
+  display: block;
+}
+
+.restore-vault strong {
+  color: #adcbc0;
+  font-size: 11px;
+}
+
+.restore-vault small {
+  margin-top: 4px;
+  color: #657a71;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.restore-vault input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.transfer-review {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+  padding: 20px;
+  border: 1px solid #72e6c033;
+  border-radius: 16px;
+  background: #72e6c00b;
+}
+
+.transfer-review dl {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  background: #ffffff10;
+}
+
+.transfer-review dl div {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 14px;
+  padding: 11px 12px;
+  background: #0a1714;
+}
+
+.transfer-review dt,
+.transfer-review p {
+  color: #71877e;
+  font-size: 10px;
+}
+
+.transfer-review dd {
+  margin: 0;
+  overflow: hidden;
+  color: #e7f3ef;
+  font:
+    11px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  text-align: right;
+  text-overflow: ellipsis;
+}
+
+.sms-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 13px;
+}
+
+.sms-actions a,
+.sms-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  padding: 11px 15px;
+  border: 1px solid #ffffff15;
+  border-radius: 11px;
+  color: #071218;
+  background: #72e6c0;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.sms-actions button {
+  color: #dcebe5;
+  background: transparent;
+}

@@ -43,6 +43,17 @@
   opacity: 0.55;
 }
 
+.pr-brand__suffix {
+  margin-left: 0.1rem;
+  padding-left: 0.85rem;
+  border-left: 1px solid var(--pr-line);
+  color: #a8bdb4;
+  font-size: 0.78rem;
+  font-weight: 550;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .pr-public-header {
   height: 88px;
   display: flex;
