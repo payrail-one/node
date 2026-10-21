@@ -95,3 +95,21 @@ from all four quorum nodes. Consensus ingestion/execution and automated deposit
 settlement are therefore operational on the R1 testnet. Automated Ethereum
 release and finalized release completion remain a production gate for the
 outbound direction.
+
+## Public devnet routing
+
+`devnet.payrail.one` is a Cloudflare Worker custom domain. The worker maps the
+public UI to `/payrail/devnet/` and its API to `/payrail/api/` on
+`r1.verita.tech`. The R1 TLS origin must therefore include
+[`deploy/nginx-payrail-locations.conf`](../deploy/nginx-payrail-locations.conf)
+inside the active port `8082` server block. Omitting that include makes both
+paths fall through to an unrelated legacy upstream and surfaces as a public
+Cloudflare `502`.
+
+In the current single-network R1 topology, `c1-gpu01` is the TLS origin and the
+gateway is the existing debug instance on `c1-gpu04` at
+`192.168.9.69:18083`. Permit only `192.168.9.66` to reach that port. Validate
+with `nginx -t`, reload the existing nginx process, then require HTTP `200` from
+both `https://devnet.payrail.one/` and
+`https://devnet.payrail.one/api/status`. The status response must report all
+four validators online and the `TUSDT` bridge asset before the route is accepted.
