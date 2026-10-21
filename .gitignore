@@ -2,6 +2,9 @@
 target/
 web/node_modules/
 web/apps/node/dist/
+web/apps/*/node_modules/
+web/apps/*/dist/
+web/apps/*/.wrangler/
 .DS_Store
 **/__pycache__/
 *.py[cod]
